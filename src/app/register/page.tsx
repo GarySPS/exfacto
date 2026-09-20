@@ -38,7 +38,7 @@ function isValidPhoneNumber(phone: string) {
 
 function phoneToHiddenEmail(phone: string) {
   const digits = phone.replace(/\D/g, "");
-  return `${digits}@goldenaxis60.member`;
+  return `${digits}@exfacto.member`;
 }
 
 export default function RegisterPage() {

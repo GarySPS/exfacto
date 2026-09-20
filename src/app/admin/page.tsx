@@ -52,7 +52,7 @@ function AdminRedirect({ profile }: { profile: Profile }) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#050505] text-white">
       <div className="rounded-2xl border border-yellow-400/20 bg-white/[0.05] px-6 py-5 text-center">
-        <p className="text-sm font-bold text-yellow-300">Golden Axis 60</p>
+        <p className="text-sm font-bold text-yellow-300">ExFacto</p>
         <p className="mt-2 text-sm text-white/55">Opening admin control...</p>
       </div>
     </main>

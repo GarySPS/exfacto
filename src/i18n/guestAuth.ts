@@ -11,8 +11,8 @@ export const guestAuth = {
       support: "Support",
       secure: "Secure",
       restricted: "Restricted",
-      footerMember: "© Golden Axis 60 · Official Member Portal",
-      footerAdmin: "© Golden Axis 60 · Control Center",
+      footerMember: "© ExFacto · Official Member Portal",
+      footerAdmin: "© ExFacto · Control Center",
     },
 
     login: {
@@ -61,7 +61,7 @@ export const guestAuth = {
   officialMemberRegistration: "Official Member Registration",
   title: "Create Account",
   description:
-    "Create your Golden Axis 60 member account to access assigned campaign tasks, account records, referral benefits, and support.",
+    "Create your ExFacto member account to access assigned campaign tasks, account records, referral benefits, and support.",
 
   displayName: "Display Name",
   displayNamePlaceholder: "Gold Member",
@@ -80,7 +80,7 @@ export const guestAuth = {
   referralPlaceholder: "Enter referral code",
 
   agreement:
-    "I agree to the Golden Axis 60 member agreement, campaign rules, and account review process.",
+    "I agree to the ExFacto member agreement, campaign rules, and account review process.",
 
   creating: "Creating account...",
   create: "Create Account",
@@ -120,8 +120,8 @@ export const guestAuth = {
       support: "客服",
       secure: "安全",
       restricted: "限制访问",
-      footerMember: "© Golden Axis 60 · 官方会员入口",
-      footerAdmin: "© Golden Axis 60 · 控制中心",
+      footerMember: "© ExFacto · 官方会员入口",
+      footerAdmin: "© ExFacto · 控制中心",
     },
 
     login: {
@@ -164,7 +164,7 @@ export const guestAuth = {
   officialMemberRegistration: "官方会员注册",
   title: "创建账户",
   description:
-    "创建您的 Golden Axis 60 会员账户，以访问推广任务、账户记录、推荐权益和客服。",
+    "创建您的 ExFacto 会员账户，以访问推广任务、账户记录、推荐权益和客服。",
 
   displayName: "显示名称",
   displayNamePlaceholder: "黄金会员",
@@ -183,7 +183,7 @@ export const guestAuth = {
   referralPlaceholder: "输入推荐码",
 
   agreement:
-    "我同意 Golden Axis 60 会员协议、推广规则和账户审核流程。",
+    "我同意 ExFacto 会员协议、推广规则和账户审核流程。",
 
   creating: "正在创建账户...",
   create: "创建账户",

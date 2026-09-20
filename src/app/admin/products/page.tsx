@@ -137,7 +137,7 @@ function getTierRange(price: number) {
 function buildDefaultDescription(name: string, category: string, price: number) {
   const tier = getTierLabel(price);
 
-  return `${name || "Premium jewel item"} is prepared for Golden Axis 60 campaign promotion. Category: ${
+  return `${name || "Premium jewel item"} is prepared for ExFacto campaign promotion. Category: ${
     category || "Gold Jewelry"
   }. ${tier} product detail, and gallery-ready product display.`;
 }

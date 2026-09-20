@@ -51,7 +51,7 @@ function SequenceBuilderContent({ profile }: { profile: Profile }) {
             </p>
             <h1 className="mt-1 text-3xl font-black">Sequence Builder</h1>
             <p className="mt-2 max-w-2xl text-sm text-white/50">
-              This legacy generator has been disabled because Golden Axis 60 now
+              This legacy generator has been disabled because ExFacto now
               uses product catalog, task library, and per-user task assignment.
             </p>
           </div>
@@ -84,7 +84,7 @@ function SequenceBuilderContent({ profile }: { profile: Profile }) {
         <section className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-5">
           <div className="mb-5">
             <p className="text-sm text-yellow-200/80">Correct Workflow</p>
-            <h2 className="text-2xl font-black">Golden Axis 60 Task System</h2>
+            <h2 className="text-2xl font-black">ExFacto Task System</h2>
           </div>
 
           <div className="grid grid-cols-3 gap-4">

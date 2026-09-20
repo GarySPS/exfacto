@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { isAdminRole } from "@/lib/adminPermissions";
 import type { Profile } from "@/types/profile";
 
-const ADMIN_SESSION_STARTED_AT_KEY = "golden-axis-admin-session-started-at";
+const ADMIN_SESSION_STARTED_AT_KEY = "exfacto-admin-session-started-at";
 const ADMIN_SESSION_LIMIT_MS = 12 * 60 * 60 * 1000;
 
 type AdminSessionGuardProps = {
@@ -94,7 +94,7 @@ export default function AdminSessionGuard({
       <main className="flex min-h-screen items-center justify-center bg-[#050505] text-white">
         <div className="rounded-2xl border border-yellow-400/20 bg-white/[0.05] px-6 py-5 text-center">
           <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-yellow-300 border-t-transparent" />
-          <p className="text-sm font-bold text-yellow-300">Golden Axis 60</p>
+          <p className="text-sm font-bold text-yellow-300">ExFacto</p>
           <p className="mt-2 text-sm text-white/55">
             Checking admin session...
           </p>

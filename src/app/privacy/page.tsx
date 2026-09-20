@@ -65,7 +65,7 @@ export default function PrivacyPage() {
               <h3 className="font-black">Contact Us</h3>
             </div>
             <p className="text-sm leading-6 text-white/60">
-              If you have questions about your privacy or data, please contact our support team at support@goldenaxis60.company.
+              If you have questions about your privacy or data, please contact our support team at support@exfacto60.company.
             </p>
           </LuxuryCard>
         </div>

@@ -155,7 +155,7 @@ const [hasUnreadSupport, setHasUnreadSupport] = useState(false);
   async function loadUnreadSupport() {
     if (profile.role !== "user") return;
 
-    const lastSeenKey = `golden_axis_support_seen_${profile.id}`;
+    const lastSeenKey = `exfacto_support_seen_${profile.id}`;
     const lastSeen = localStorage.getItem(lastSeenKey) || "";
 
     const { data: ticketData } = await supabase
@@ -250,9 +250,9 @@ async function handleLanguageChange(nextLanguage: Language) {
   return;
 }
 
-localStorage.setItem("golden_axis_language", nextLanguage);
+localStorage.setItem("exfacto_language", nextLanguage);
 window.dispatchEvent(
-  new CustomEvent("golden-axis-language-change", {
+  new CustomEvent("exfacto-language-change", {
     detail: nextLanguage,
   })
 );
@@ -263,7 +263,7 @@ setSavingLanguage(false);
 function handleMenuClick(item: (typeof menuItems)[number]) {
   if (item.href === "/support") {
     localStorage.setItem(
-      `golden_axis_support_seen_${profile.id}`,
+      `exfacto_support_seen_${profile.id}`,
       new Date().toISOString()
     );
     setHasUnreadSupport(false);
@@ -353,7 +353,7 @@ const profileTotalBalance = hasSplitBalances ? splitBalance : rawMainBalance;
 <div className="mt-3 flex flex-wrap items-center gap-2">
   <div className="inline-flex items-center gap-2 rounded-full border border-yellow-400/20 bg-yellow-400/10 px-3 py-1 text-xs font-bold text-yellow-200">
     <Gem className="h-3.5 w-3.5" />
-    {t.profile.goldenAxisMember}
+    {t.profile.exFactoMember}
   </div>
 
   <div className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/25 px-3 py-1 text-xs font-bold text-white/65">

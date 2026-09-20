@@ -99,8 +99,8 @@ export const zh = {
   profile: {
   openingAdmin: "正在打开控制中心...",
   goldMember: "黄金会员",
-  goldenAxisUser: "黄金轴用户",
-  goldenAxisMember: "黄金轴会员",
+  exFactoUser: "黄金轴用户",
+  exFactoMember: "黄金轴会员",
   accountCenterOnline: "账户中心在线",
   memberCenter: "会员中心",
   secureTools: "安全工具",
@@ -328,7 +328,7 @@ support: {
     withdraw: "提现",
   },
 
-  goldenAxisSupport: "Golden Axis 客服",
+  exFactoSupport: "ExFacto 客服",
   hello:
     "您好 {name}，请在下方发送消息。钱包问题请先选择充值或提现。",
   selectedTopic: "已选择主题",
@@ -494,7 +494,7 @@ terms: {
   verifiedStandard: "认证标准",
   internalStandardTitle: "平台内部标准",
   internalStandardNote:
-    "Golden Axis 60 使用内部质量检查、钱包审核和账本记录，帮助提供更安全的推广任务体验。",
+    "ExFacto 使用内部质量检查、钱包审核和账本记录，帮助提供更安全的推广任务体验。",
   view: "查看",
 
   certificatePreview: "证书预览",
@@ -502,18 +502,18 @@ terms: {
   certificates: {
     internalQuality: {
       title: "内部质量证书",
-      description: "Golden Axis 60 平台质量与推广审核标准。",
+      description: "ExFacto 平台质量与推广审核标准。",
     },
     certifiedExcellence: {
       title: "卓越认证标准",
-      description: "Golden Axis 60 用于质量、审核和平台信任的证书参考。",
+      description: "ExFacto 用于质量、审核和平台信任的证书参考。",
     },
   },
 
   trustBadges: {
     internalCertificate: {
       title: "内部证书",
-      text: "Golden Axis 60 官方质量标识",
+      text: "ExFacto 官方质量标识",
     },
     qualityChecklist: {
       title: "质量检查",
@@ -536,7 +536,7 @@ terms: {
   sections: {
     promotionalCredit: {
       title: "推广积分",
-      text: "Golden Axis 60 使用推广积分和奖励。显示的余额、产品价值和奖励属于推广任务体验的一部分，需经过平台审核与确认。",
+      text: "ExFacto 使用推广积分和奖励。显示的余额、产品价值和奖励属于推广任务体验的一部分，需经过平台审核与确认。",
     },
     assignedMissionRule: {
       title: "任务规则",
@@ -694,7 +694,7 @@ languageUpdated: "语言已更新。",
 
   loggedInAs: "当前登录",
   fallbackName: "管理员",
-  adminControl: "Golden Axis 60 管理控制",
+  adminControl: "ExFacto 管理控制",
   noEmail: "无邮箱",
 
   changePassword: "修改密码",

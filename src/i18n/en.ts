@@ -102,8 +102,8 @@ export const en = {
   profile: {
   openingAdmin: "Opening control center...",
   goldMember: "Gold Member",
-  goldenAxisUser: "Golden Axis User",
-  goldenAxisMember: "Golden Axis Member",
+  exFactoUser: "ExFacto User",
+  exFactoMember: "ExFacto Member",
   accountCenterOnline: "Account Center Online",
   memberCenter: "Member Center",
   secureTools: "Secure Tools",
@@ -335,7 +335,7 @@ support: {
     withdraw: "WITHDRAW",
   },
 
-  goldenAxisSupport: "Golden Axis Support",
+  exFactoSupport: "ExFacto Support",
   hello:
     "Hello {name}, send a message below. For wallet help, choose deposit or withdraw first.",
   selectedTopic: "Selected Topic",
@@ -511,7 +511,7 @@ terms: {
   verifiedStandard: "Verified Standard",
   internalStandardTitle: "Internal Platform Standard",
   internalStandardNote:
-    "Golden Axis 60 uses internal quality checks, wallet review, and ledger-based request records to support a more secure promotional campaign experience.",
+    "ExFacto uses internal quality checks, wallet review, and ledger-based request records to support a more secure promotional campaign experience.",
   view: "View",
 
   certificatePreview: "Certificate Preview",
@@ -520,19 +520,19 @@ terms: {
     internalQuality: {
       title: "Internal Quality Certificate",
       description:
-        "Golden Axis 60 internal platform quality and campaign review standard.",
+        "ExFacto internal platform quality and campaign review standard.",
     },
     certifiedExcellence: {
       title: "Certified Excellence Standard",
       description:
-        "Golden Axis 60 certificate reference for quality, review, and platform trust.",
+        "ExFacto certificate reference for quality, review, and platform trust.",
     },
   },
 
   trustBadges: {
     internalCertificate: {
       title: "Internal Certificate",
-      text: "Official Golden Axis 60 quality mark",
+      text: "Official ExFacto quality mark",
     },
     qualityChecklist: {
       title: "Quality Checklist",
@@ -555,7 +555,7 @@ terms: {
   sections: {
     promotionalCredit: {
       title: "Promotional Credit",
-      text: "Golden Axis 60 uses campaign credits and rewards. Displayed balances, product values, and rewards are part of the promotional task experience unless officially reviewed and approved by the platform.",
+      text: "ExFacto uses campaign credits and rewards. Displayed balances, product values, and rewards are part of the promotional task experience unless officially reviewed and approved by the platform.",
     },
     assignedMissionRule: {
       title: "Assigned Mission Rule",
@@ -714,7 +714,7 @@ languageUpdated: "Language updated.",
 
   loggedInAs: "Logged in as",
   fallbackName: "Admin",
-  adminControl: "Golden Axis 60 Admin Control",
+  adminControl: "ExFacto Admin Control",
   noEmail: "No email",
 
   changePassword: "Change Password",

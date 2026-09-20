@@ -60,7 +60,7 @@ export default function BottomNav() {
 
       const nextLanguage = getLanguage(data?.language);
       setLanguage(nextLanguage);
-      localStorage.setItem("golden_axis_language", nextLanguage);
+      localStorage.setItem("exfacto_language", nextLanguage);
     }
 
     function handleLanguageChange(event: Event) {
@@ -68,7 +68,7 @@ export default function BottomNav() {
       const nextLanguage = getLanguage(customEvent.detail);
 
       setLanguage(nextLanguage);
-      localStorage.setItem("golden_axis_language", nextLanguage);
+      localStorage.setItem("exfacto_language", nextLanguage);
     }
 
     loadLanguage();

@@ -24,8 +24,8 @@ type GuestChatMessage = {
   created_at: string;
 };
 
-const SESSION_KEY = "golden_axis_guest_support_session";
-const TICKET_KEY = "golden_axis_guest_support_ticket";
+const SESSION_KEY = "exfacto_guest_support_session";
+const TICKET_KEY = "exfacto_guest_support_ticket";
 
 function createGuestSessionId() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -232,7 +232,7 @@ async function loadThread(
             </div>
 
             <p className="text-xs font-black uppercase tracking-[0.22em] text-yellow-200/65">
-              Golden Axis 60
+              ExFacto
             </p>
 
             <h1 className="mt-2 text-3xl font-black tracking-tight">

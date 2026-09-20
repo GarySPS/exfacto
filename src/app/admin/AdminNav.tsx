@@ -78,14 +78,14 @@ export default function AdminNav({ language, profile }: AdminNavProps) {
       return;
     }
 
-    const savedLanguage = localStorage.getItem("golden-axis-language");
+    const savedLanguage = localStorage.getItem("exfacto-language");
 
     if (savedLanguage === "zh" || savedLanguage === "en") {
       setCurrentLanguage(savedLanguage);
     }
 
     function handleLanguageChange() {
-      const updatedLanguage = localStorage.getItem("golden-axis-language");
+      const updatedLanguage = localStorage.getItem("exfacto-language");
 
       if (updatedLanguage === "zh" || updatedLanguage === "en") {
         setCurrentLanguage(updatedLanguage);
@@ -93,13 +93,13 @@ export default function AdminNav({ language, profile }: AdminNavProps) {
     }
 
     window.addEventListener(
-      "golden-axis-language-change",
+      "exfacto-language-change",
       handleLanguageChange
     );
 
     return () => {
       window.removeEventListener(
-        "golden-axis-language-change",
+        "exfacto-language-change",
         handleLanguageChange
       );
     };
@@ -158,8 +158,8 @@ export default function AdminNav({ language, profile }: AdminNavProps) {
     setSuccessText("");
     setCurrentLanguage(nextLanguage);
 
-    localStorage.setItem("golden-axis-language", nextLanguage);
-    window.dispatchEvent(new Event("golden-axis-language-change"));
+    localStorage.setItem("exfacto-language", nextLanguage);
+    window.dispatchEvent(new Event("exfacto-language-change"));
 
     if (!profile) return;
 
@@ -221,7 +221,7 @@ export default function AdminNav({ language, profile }: AdminNavProps) {
         <div className="mb-3 flex flex-col gap-3 px-2 xl:flex-row xl:items-center xl:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-yellow-300">
-              Golden Axis 60
+              ExFacto
             </p>
             <h2 className="text-lg font-black text-white">{t.title}</h2>
 
