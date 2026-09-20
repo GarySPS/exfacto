@@ -1,7 +1,7 @@
 {
-  "name": "Golden Axis 60",
-  "short_name": "GoldenAxis60",
-  "description": "Official Golden Axis 60 member portal.",
+  "name": "Exfacto",
+  "short_name": "Exfacto",
+  "description": "Official Exfacto member portal.",
   "start_url": "/login",
   "display": "standalone",
   "background_color": "#050505",
