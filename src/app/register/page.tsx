@@ -38,7 +38,7 @@ function isValidPhoneNumber(phone: string) {
 
 function phoneToHiddenEmail(phone: string) {
   const digits = phone.replace(/\D/g, "");
-  return `${digits}@exfacto.member`;
+  return `${digits}@exfactomember`;
 }
 
 export default function RegisterPage() {
@@ -242,7 +242,7 @@ async function handleRegister(e: FormEvent<HTMLFormElement>) {
 
             <div>
               <p className="text-sm font-black tracking-wide">
-                Golden Axis 60
+                ExFacto
               </p>
               <p className="text-[11px] text-white/40">
                 {t.register.memberRegistration}
@@ -454,7 +454,7 @@ async function handleRegister(e: FormEvent<HTMLFormElement>) {
                     className="mt-1 h-4 w-4 accent-yellow-400"
                   />
                   <span className="leading-5">
-                    I agree to the Golden Axis 60 member agreement, campaign
+                    I agree to the ExFacto member agreement, campaign
                     rules, and account review process.
                   </span>
                 </label>
@@ -520,7 +520,7 @@ Create Account
         </div>
 
         <div className="px-5 pb-5 text-center text-[11px] text-white/35">
-          <p>© Golden Axis 60 · Official Member Portal</p>
+          <p>© ExFacto · Official Member Portal</p>
 
           <div className="mt-2 flex items-center justify-center gap-3">
             <Link href="/terms" className="hover:text-yellow-300">

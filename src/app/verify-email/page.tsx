@@ -65,7 +65,7 @@ export default function VerifyEmailPage() {
         <h1 className="text-2xl font-black">Email verification disabled</h1>
 
         <p className="mt-3 text-sm leading-6 text-white/50">
-          Golden Axis 60 now uses referral-code verification during registration.
+          ExFacto now uses referral-code verification during registration.
           A valid referral code is required to create a member account.
         </p>
 

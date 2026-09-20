@@ -38,7 +38,7 @@ export default function BottomNav() {
   useEffect(() => {
     let mounted = true;
 
-    const cachedLanguage = localStorage.getItem("golden_axis_language");
+    const cachedLanguage = localStorage.getItem("exfacto_language");
     if (cachedLanguage) {
       setLanguage(getLanguage(cachedLanguage));
     }
@@ -74,14 +74,14 @@ export default function BottomNav() {
     loadLanguage();
 
     window.addEventListener(
-      "golden-axis-language-change",
+      "exfacto-language-change",
       handleLanguageChange
     );
 
     return () => {
       mounted = false;
       window.removeEventListener(
-        "golden-axis-language-change",
+        "exfacto-language-change",
         handleLanguageChange
       );
     };
