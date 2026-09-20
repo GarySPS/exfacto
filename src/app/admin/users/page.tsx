@@ -1,0 +1,2405 @@
+//app>admin>users>page.tsx
+
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { en } from "@/i18n/en";
+import { zh } from "@/i18n/zh";
+import RequireAuth from "@/components/auth/RequireAuth";
+import AdminSessionGuard from "@/components/auth/AdminSessionGuard";
+import GenerateOrdersModal from "./components/GenerateOrdersModal";
+import LuckyOrderModal from "./components/LuckyOrderModal";
+import ViewOrdersModal from "./components/ViewOrdersModal";
+import ResetOrdersModal from "./components/ResetOrdersModal";
+import SecurityResetModal from "./components/SecurityResetModal";
+import AdjustBalanceModal from "./components/AdjustBalanceModal";
+import DeleteUserModal from "./components/DeleteUserModal";
+import NicknameModal from "./components/NicknameModal";
+import ReferralCodeModal from "./components/ReferralCodeModal";
+import ReferralBonusModal from "./components/ReferralBonusModal";
+import UserMessageModal from "./components/UserMessageModal";
+import AdminNav from "../AdminNav";
+import { supabase } from "@/lib/supabaseClient";
+import { canAccessAdminPath } from "@/lib/adminPermissions";
+import type { Profile } from "@/types/profile";
+import {
+  AlertCircle,
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  Crown,
+  Eye,
+  MessageCircle,
+  RotateCcw,
+  PackagePlus,
+  Pencil,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  Trash2,
+  Users,
+} from "lucide-react";
+
+type ReferralParentInfo = {
+  id: string;
+  display_name: string | null;
+  email: string | null;
+  phone: string | null;
+  member_id: string | null;
+  referral_code: string | null;
+};
+
+type ManagedUser = Profile & {
+  admin_nickname: string | null;
+  referral_parent: ReferralParentInfo | null;
+  last_seen_at: string | null;
+};
+
+type LuckyProductOption = {
+  id: string;
+  name: string;
+  price: number;
+  category: string;
+  main_image: string | null;
+};
+
+type GeneratedOrderItemPreview = {
+  id: string;
+  product_snapshot: {
+  id?: string;
+  name?: string;
+  main_image?: string | null;
+  category?: string;
+  custom_lucky_amount?: string | number;
+};
+  unit_price: number;
+  quantity: number;
+  subtotal: number;
+};
+
+type GeneratedOrderPreview = {
+  id: string;
+  step_number: number;
+  order_total: number;
+  profit_rate: number;
+  profit_amount: number;
+  lucky_profit_rate_percent: number | null;
+  lucky_profit_amount: number;
+  campaign_base_amount: number | null;
+  normal_task_rate: number | null;
+  order_type: "normal" | "lucky";
+  status: "pending" | "completed" | "cancelled";
+  is_lucky_bonus: boolean;
+  created_at: string;
+  completed_at: string | null;
+  user_generated_order_items?: GeneratedOrderItemPreview[];
+};
+
+type UserOrderSummary = {
+  totalOrders: number;
+  maxStep: number;
+  completedOrders: number;
+  pendingOrders: number;
+  luckySteps: number[];
+};
+
+type AdminUsersText = typeof en.adminUsers;
+
+export default function AdminUsersPage() {
+  return (
+    <RequireAuth>
+      {(profile) => (
+        <AdminSessionGuard profile={profile}>
+          <AdminUsersContent profile={profile} />
+        </AdminSessionGuard>
+      )}
+    </RequireAuth>
+  );
+}
+
+function AdminUsersContent({ profile }: { profile: Profile }) {
+  const currentLanguage = profile.language === "zh" ? "zh" : "en";
+
+  const t: AdminUsersText =
+    currentLanguage === "zh"
+      ? (zh.adminUsers as unknown as AdminUsersText)
+      : en.adminUsers;
+
+  const [users, setUsers] = useState<ManagedUser[]>([]);
+  const [searchText, setSearchText] = useState("");
+const [roleFilter, setRoleFilter] = useState<
+  "all" | "user" | "admin" | "leader" | "support"
+>("all");
+const [statusFilter, setStatusFilter] = useState("all");
+const [sortBy, setSortBy] = useState<
+  "newest" | "name" | "balance_high" | "today_high" | "step_high"
+>("newest");
+const [currentPage, setCurrentPage] = useState(1);
+const [pageSize, setPageSize] = useState(10);
+const [minBalanceFilter, setMinBalanceFilter] = useState("");
+const [maxBalanceFilter, setMaxBalanceFilter] = useState("");
+const [minStepFilter, setMinStepFilter] = useState("");
+const [maxStepFilter, setMaxStepFilter] = useState("");
+const [selectedUser, setSelectedUser] = useState<ManagedUser | null>(null);
+const [messageUser, setMessageUser] = useState<ManagedUser | null>(null);
+const [nicknameUser, setNicknameUser] = useState<ManagedUser | null>(null);
+const [nicknameValue, setNicknameValue] = useState("");
+
+const [referralUser, setReferralUser] = useState<ManagedUser | null>(null);
+const [referralValue, setReferralValue] = useState("");
+const [referralBonusUser, setReferralBonusUser] =
+  useState<ManagedUser | null>(null);
+const [referralBonusAmount, setReferralBonusAmount] = useState(0);
+
+const [deleteUser, setDeleteUser] = useState<ManagedUser | null>(null);
+const [deleteConfirmText, setDeleteConfirmText] = useState("");
+const [securityUser, setSecurityUser] = useState<ManagedUser | null>(null);
+const [resetPassword, setResetPassword] = useState("");
+const [resetPasscode, setResetPasscode] = useState("");
+const [resetResult, setResetResult] = useState("");
+const [generateUser, setGenerateUser] = useState<ManagedUser | null>(null);
+const [generateTaskCount, setGenerateTaskCount] = useState(60);
+const [generateProfitRate, setGenerateProfitRate] = useState(0.008);
+const [generateResetExisting, setGenerateResetExisting] = useState(false);
+const [luckyUser, setLuckyUser] = useState<ManagedUser | null>(null);
+const [luckyProducts, setLuckyProducts] = useState<LuckyProductOption[]>([]);
+const [luckyStepNumber, setLuckyStepNumber] = useState<number | "">("");
+const [luckyProductId, setLuckyProductId] = useState("");
+const [luckyAmount, setLuckyAmount] = useState(2800);
+const [luckyProfitRate, setLuckyProfitRate] = useState(5);
+const [viewOrdersUser, setViewOrdersUser] = useState<ManagedUser | null>(null);
+const [viewOrders, setViewOrders] = useState<GeneratedOrderPreview[]>([]);
+const [viewOrdersLoading, setViewOrdersLoading] = useState(false);
+const [orderStatsByUser, setOrderStatsByUser] = useState<
+  Record<string, UserOrderSummary>
+>({});
+const [resetOrdersUser, setResetOrdersUser] = useState<ManagedUser | null>(null);
+const [resetOrdersConfirmText, setResetOrdersConfirmText] = useState("");
+const [resetOrdersResetStep, setResetOrdersResetStep] = useState(true);
+const [resetOrdersResetBalance, setResetOrdersResetBalance] = useState(true);
+
+  const [adjustAmount, setAdjustAmount] = useState(100);
+  const [adjustNote, setAdjustNote] = useState("");
+
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const [successText, setSuccessText] = useState("");
+  const [errorText, setErrorText] = useState("");
+
+const hasPageAccess = canAccessAdminPath(profile.role, "/admin/users");
+
+const isAdmin = profile.role === "admin";
+const isScopedStaffRole = profile.role === "leader" || profile.role === "support";
+const isStaffControlRole = isAdmin || isScopedStaffRole;
+
+// Admin sees all users.
+// Leader/support see only referral-tree users from database RPC.
+const canManageOrders = isStaffControlRole;
+const canManageMoney = isStaffControlRole;
+const canManageSecurity = isStaffControlRole;
+const canDeleteUsers = isStaffControlRole;
+const canEditUserInfo = isStaffControlRole;
+const canEditReferralCode = isStaffControlRole;
+
+async function loadUsers() {
+  setLoading(true);
+  setErrorText("");
+
+  const { data: profileData, error: profileError } = await supabase.rpc(
+    "get_staff_visible_profiles"
+  );
+
+  if (profileError) {
+    setErrorText(profileError.message);
+    setLoading(false);
+    return;
+  }
+
+  const profileRows = ((profileData || []) as Profile[]).filter(
+    (user) => user.status !== "deleted"
+  );
+
+  const userIds = profileRows.map((user) => user.id);
+
+  let noteMap = new Map<string, string | null>();
+
+  if (userIds.length > 0) {
+const { data: noteRows, error: noteError } = await supabase.rpc(
+  "get_staff_visible_user_notes",
+  {
+    p_user_ids: userIds,
+  }
+);
+
+    if (noteError) {
+      setErrorText(noteError.message);
+      setLoading(false);
+      return;
+    }
+
+    noteMap = new Map(
+      ((noteRows || []) as { user_id: string; nickname: string | null }[]).map(
+        (note) => [note.user_id, note.nickname]
+      )
+    );
+  }
+
+    let onlineMap = new Map<string, string | null>();
+
+  if (userIds.length > 0) {
+    const { data: onlineRows, error: onlineError } = await supabase.rpc(
+      "get_staff_visible_online_status",
+      {
+        p_user_ids: userIds,
+      }
+    );
+
+    if (onlineError) {
+      setErrorText(onlineError.message);
+      setLoading(false);
+      return;
+    }
+
+    onlineMap = new Map(
+      (
+        (onlineRows || []) as {
+          user_id: string;
+          last_seen_at: string | null;
+        }[]
+      ).map((item) => [item.user_id, item.last_seen_at])
+    );
+  }
+
+  const parentIds = Array.from(
+    new Set(
+      profileRows
+        .map((user) => user.referred_by)
+        .filter((id): id is string => Boolean(id))
+    )
+  );
+
+  let parentMap = new Map<string, ReferralParentInfo>();
+
+  if (parentIds.length > 0) {
+    const { data: parentRows, error: parentError } = await supabase
+      .from("profiles")
+      .select("id, display_name, email, phone, member_id, referral_code")
+      .in("id", parentIds);
+
+    if (!parentError) {
+      parentMap = new Map(
+        ((parentRows || []) as ReferralParentInfo[]).map((parent) => [
+          parent.id,
+          parent,
+        ])
+      );
+    }
+  }
+
+const mergedUsers = profileRows.map((user) => ({
+  ...user,
+  admin_nickname: noteMap.get(user.id) || null,
+  last_seen_at: onlineMap.get(user.id) || null,
+  referral_parent: user.referred_by
+    ? parentMap.get(user.referred_by) || null
+    : null,
+}));
+
+const summaryMap: Record<string, UserOrderSummary> = {};
+
+  if (userIds.length > 0) {
+    // Call the secure RPC function to bypass limits and RLS entirely
+    const { data: summaryData, error: summaryError } = await supabase.rpc(
+      "get_staff_visible_generated_order_summary_counts"
+    );
+
+    if (!summaryError && summaryData) {
+      summaryData.forEach((row: any) => {
+        summaryMap[row.user_id] = {
+          totalOrders: row.total_orders || 0,
+          maxStep: row.max_step || 0,
+          completedOrders: row.completed_orders || 0,
+          pendingOrders: row.pending_orders || 0,
+          luckySteps: row.lucky_steps || [],
+        };
+      });
+    }
+  }
+
+  setUsers(mergedUsers);
+  setOrderStatsByUser(summaryMap);
+  setLoading(false);
+}
+  useEffect(() => {
+    if (hasPageAccess) {
+      loadUsers();
+    } else {
+      setLoading(false);
+    }
+  }, [hasPageAccess]);
+
+  const userStatuses = useMemo(() => {
+  return Array.from(
+    new Set(users.map((user) => user.status).filter(Boolean))
+  );
+}, [users]);
+
+const filteredUsers = useMemo(() => {
+  const keyword = searchText.toLowerCase().trim();
+
+  const result = users.filter((user) => {
+    const matchesSearch =
+      !keyword ||
+      user.display_name?.toLowerCase().includes(keyword) ||
+user.email?.toLowerCase().includes(keyword) ||
+user.phone?.toLowerCase().includes(keyword) ||
+user.admin_nickname?.toLowerCase().includes(keyword) ||
+user.referral_code?.toLowerCase().includes(keyword) ||
+user.referral_parent?.display_name?.toLowerCase().includes(keyword) ||
+user.referral_parent?.email?.toLowerCase().includes(keyword) ||
+user.referral_parent?.phone?.toLowerCase().includes(keyword) ||
+user.referral_parent?.member_id?.toLowerCase().includes(keyword) ||
+user.referral_parent?.referral_code?.toLowerCase().includes(keyword) ||
+user.member_id?.toLowerCase().includes(keyword) ||
+user.id.toLowerCase().includes(keyword);
+
+    const matchesRole = roleFilter === "all" || user.role === roleFilter;
+
+    const matchesStatus =
+  statusFilter === "all" || user.status === statusFilter;
+
+const displayBalance = getDisplayBalance(user);
+const currentStep = Number(user.current_step || 0);
+
+const matchesMinBalance =
+  !minBalanceFilter || displayBalance >= Number(minBalanceFilter);
+
+const matchesMaxBalance =
+  !maxBalanceFilter || displayBalance <= Number(maxBalanceFilter);
+
+const matchesMinStep =
+  !minStepFilter || currentStep >= Number(minStepFilter);
+
+const matchesMaxStep =
+  !maxStepFilter || currentStep <= Number(maxStepFilter);
+
+return (
+  matchesSearch &&
+  matchesRole &&
+  matchesStatus &&
+  matchesMinBalance &&
+  matchesMaxBalance &&
+  matchesMinStep &&
+  matchesMaxStep
+);
+  });
+
+  return [...result].sort((a, b) => {
+    if (sortBy === "name") {
+      return (a.display_name || "").localeCompare(b.display_name || "");
+    }
+
+if (sortBy === "balance_high") {
+  return getDisplayBalance(b) - getDisplayBalance(a);
+}
+
+    if (sortBy === "today_high") {
+      return Number(b.today_earnings || 0) - Number(a.today_earnings || 0);
+    }
+
+    if (sortBy === "step_high") {
+      return Number(b.current_step || 0) - Number(a.current_step || 0);
+    }
+
+    return (
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  });
+}, [
+  users,
+  searchText,
+  roleFilter,
+  statusFilter,
+  sortBy,
+  minBalanceFilter,
+  maxBalanceFilter,
+  minStepFilter,
+  maxStepFilter,
+]);
+
+const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+
+const paginatedUsers = useMemo(() => {
+  const start = (currentPage - 1) * pageSize;
+  return filteredUsers.slice(start, start + pageSize);
+}, [filteredUsers, currentPage, pageSize]);
+
+const firstResult =
+  filteredUsers.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+
+const lastResult = Math.min(currentPage * pageSize, filteredUsers.length);
+
+useEffect(() => {
+  setCurrentPage(1);
+}, [
+  searchText,
+  roleFilter,
+  statusFilter,
+  sortBy,
+  pageSize,
+  minBalanceFilter,
+  maxBalanceFilter,
+  minStepFilter,
+  maxStepFilter,
+]);
+
+useEffect(() => {
+  if (currentPage > totalPages) {
+    setCurrentPage(totalPages);
+  }
+}, [currentPage, totalPages]);
+
+function formatMoney(value: number | null | undefined) {
+  return `$${Number(value || 0).toFixed(2)}`;
+}
+
+function pickRecommendedLuckyProduct(
+  products: LuckyProductOption[],
+  amount: number
+) {
+  if (products.length === 0) return null;
+
+  const cleanAmount = Number(amount || 0);
+
+  if (cleanAmount <= 0) {
+    return [...products].sort(
+      (a, b) => Number(a.price || 0) - Number(b.price || 0)
+    )[0];
+  }
+
+  const affordableProducts = products.filter(
+    (product) => Number(product.price || 0) <= cleanAmount
+  );
+
+  const productPool =
+    affordableProducts.length > 0 ? affordableProducts : products;
+
+  return [...productPool].sort((a, b) => {
+    const aPrice = Number(a.price || 0);
+    const bPrice = Number(b.price || 0);
+
+    const aGap = Math.abs(aPrice - cleanAmount);
+    const bGap = Math.abs(bPrice - cleanAmount);
+
+    if (aGap !== bGap) return aGap - bGap;
+
+    return bPrice - aPrice;
+  })[0];
+}
+
+function shortId(value: string) {
+  if (!value) return "-";
+  return `${value.slice(0, 8)}...${value.slice(-6)}`;
+}
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return "-";
+  return new Date(value).toLocaleDateString();
+}
+
+function isOnline(user: ManagedUser) {
+  if (!user.last_seen_at) return false;
+
+  const lastSeenTime = new Date(user.last_seen_at).getTime();
+
+  if (Number.isNaN(lastSeenTime)) return false;
+
+  return Date.now() - lastSeenTime <= 5 * 60 * 1000;
+}
+
+function getDisplayBalance(user: ManagedUser) {
+  const deposited = Number(user.deposited_balance || 0);
+  const referral = Number(user.referral_bonus_balance || 0);
+  const profit = Number(user.task_profit_balance || 0);
+  const legacyBalance = Number(user.balance || 0);
+
+  const hasSplitBalances =
+    user.deposited_balance !== undefined ||
+    user.referral_bonus_balance !== undefined ||
+    user.task_profit_balance !== undefined;
+
+  if (hasSplitBalances) {
+    return Number((deposited + referral + profit).toFixed(2));
+  }
+
+  return Number(legacyBalance.toFixed(2));
+}
+
+function getAutoOrderAmount(user: ManagedUser) {
+  const availableBalance = getDisplayBalance(user);
+
+  if (availableBalance <= 0) return 0;
+
+  return Number(Math.min(availableBalance, 10000).toFixed(2));
+}
+
+function buildOrderSummary(orders: GeneratedOrderPreview[]): UserOrderSummary {
+  const summary: UserOrderSummary = {
+    totalOrders: orders.length,
+    maxStep: 0,
+    completedOrders: 0,
+    pendingOrders: 0,
+    luckySteps: [],
+  };
+
+  orders.forEach((order) => {
+    const stepNumber = Number(order.step_number || 0);
+
+    summary.maxStep = Math.max(summary.maxStep, stepNumber);
+
+    if (order.status === "completed") {
+      summary.completedOrders += 1;
+    }
+
+    if (order.status === "pending") {
+      summary.pendingOrders += 1;
+    }
+
+    if (order.is_lucky_bonus && stepNumber > 0) {
+      summary.luckySteps.push(stepNumber);
+    }
+  });
+
+  summary.luckySteps.sort((a, b) => a - b);
+
+  return summary;
+}
+
+function updateUserOrderSummary(
+  userId: string,
+  orders: GeneratedOrderPreview[]
+) {
+  setOrderStatsByUser((current) => ({
+    ...current,
+    [userId]: buildOrderSummary(orders),
+  }));
+}
+
+async function openGenerateOrdersModal(user: ManagedUser) {
+  setGenerateUser(user);
+  setGenerateTaskCount(60);
+  setGenerateProfitRate(0.008);
+  setGenerateResetExisting(false);
+  setSuccessText("");
+  setErrorText("");
+}
+
+function escapeCsv(value: string | number | null | undefined) {
+  const cleanValue = String(value ?? "").replaceAll('"', '""');
+  return `"${cleanValue}"`;
+}
+
+function exportUsersToCsv() {
+const headers = [
+  "Name",
+  "Phone",
+  "ID",
+    "Nickname",
+    "Role",
+    "Status",
+    "Total Balance",
+    "Deposited Balance",
+    "Referral Bonus",
+    "Task Profit",
+    "Today Earnings",
+    "Total Earnings",
+    "Current Step",
+    "Credit Score",
+    "Referral Code",
+    "Language",
+    "Created At",
+  ];
+
+const rows = filteredUsers.map((user) => [
+  user.display_name || "",
+  user.phone || "",
+  user.member_id || user.id,
+    user.admin_nickname || "",
+    user.role,
+    user.status,
+    getDisplayBalance(user).toFixed(2),
+    Number(user.deposited_balance || 0).toFixed(2),
+    Number(user.referral_bonus_balance || 0).toFixed(2),
+    Number(user.task_profit_balance || 0).toFixed(2),
+    Number(user.today_earnings || 0).toFixed(2),
+    Number(user.total_earnings || 0).toFixed(2),
+    user.current_step,
+    user.credit_score,
+    user.referral_code || "",
+    user.language || "en",
+    user.created_at,
+  ]);
+
+  const csvContent = [headers, ...rows]
+    .map((row) => row.map(escapeCsv).join(","))
+    .join("\n");
+
+  const blob = new Blob([csvContent], {
+    type: "text/csv;charset=utf-8;",
+  });
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = `golden-axis-users-${new Date()
+    .toISOString()
+    .slice(0, 10)}.csv`;
+
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function generateSixDigitPasscode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function generateTemporaryPassword() {
+  return `GA60-${Math.floor(100000 + Math.random() * 900000)}`;
+}
+
+function openSecurityReset(user: ManagedUser) {
+  setSecurityUser(user);
+  setResetPassword(generateTemporaryPassword());
+  setResetPasscode(generateSixDigitPasscode());
+  setResetResult("");
+  setErrorText("");
+  setSuccessText("");
+}
+
+async function handleResetLoginPassword() {
+  if (!securityUser) return;
+
+  if (resetPassword.length < 6) {
+    setErrorText("Password must be at least 6 characters.");
+    return;
+  }
+
+  setActionLoading(true);
+  setErrorText("");
+  setSuccessText("");
+  setResetResult("");
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    setErrorText("Admin session expired. Please login again.");
+    setActionLoading(false);
+    return;
+  }
+
+  const response = await fetch("/api/admin/reset-password", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({
+      userId: securityUser.id,
+      newPassword: resetPassword,
+    }),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    setErrorText(result.error || "Failed to reset login password.");
+    setActionLoading(false);
+    return;
+  }
+
+  setResetResult(
+    `Login password reset successfully. Give this new password to the user: ${resetPassword}`
+  );
+  setSuccessText("Login password reset successfully.");
+  setActionLoading(false);
+}
+
+async function handleResetWithdrawPasscode() {
+  if (!securityUser) return;
+
+  if (!/^[0-9]{6}$/.test(resetPasscode)) {
+    setErrorText("Withdraw passcode must be exactly 6 digits.");
+    return;
+  }
+
+  setActionLoading(true);
+  setErrorText("");
+  setSuccessText("");
+  setResetResult("");
+
+  const { error } = await supabase.rpc("admin_reset_withdraw_passcode", {
+    p_user_id: securityUser.id,
+    p_passcode: resetPasscode,
+  });
+
+  if (error) {
+    setErrorText(error.message);
+    setActionLoading(false);
+    return;
+  }
+
+  setResetResult(
+    `Withdraw passcode reset successfully. Give this new code to the user: ${resetPasscode}`
+  );
+  setSuccessText("Withdraw passcode reset successfully.");
+  setActionLoading(false);
+}
+
+async function handleGenerateOrders() {
+  if (!generateUser) return;
+
+  if (generateTaskCount < 1) {
+    setErrorText("Task count must be at least 1.");
+    return;
+  }
+
+  const targetUser = generateUser;
+  const autoCapitalAmount = getAutoOrderAmount(targetUser);
+
+  if (autoCapitalAmount <= 0) {
+    setErrorText("This user has no available balance for auto order generation.");
+    return;
+  }
+
+  if (generateProfitRate < 0) {
+    setErrorText("Profit rate cannot be negative.");
+    return;
+  }
+
+  setActionLoading(true);
+  setSuccessText("");
+  setErrorText("");
+
+  const { error } = await supabase.rpc("generate_user_orders", {
+    p_user_id: targetUser.id,
+    p_task_count: generateTaskCount,
+    p_capital_amount: autoCapitalAmount,
+    p_profit_rate_percent: generateProfitRate,
+    p_reset_existing: generateResetExisting,
+  });
+
+  if (error) {
+    setErrorText(error.message);
+    setActionLoading(false);
+    return;
+  }
+
+  setSuccessText(
+    `${generateResetExisting ? "Reset and generated" : "Added"} ${generateTaskCount} auto orders for ${
+      targetUser.display_name || targetUser.phone || "user"
+    } using ${generateProfitRate} campaign rate and base amount ${formatMoney(
+      autoCapitalAmount
+    )}.`
+  );
+
+const { data: refreshedOrders, error: refreshError } = await supabase.rpc(
+  "get_staff_visible_generated_orders",
+  {
+    p_user_id: targetUser.id,
+  }
+);
+
+if (!refreshError) {
+  const orders = (refreshedOrders || []) as unknown as GeneratedOrderPreview[];
+  updateUserOrderSummary(targetUser.id, orders);
+}
+
+setGenerateUser(null);
+setGenerateTaskCount(60);
+setGenerateProfitRate(0.008);
+setGenerateResetExisting(false);
+
+await loadUsers();
+
+setActionLoading(false);
+}
+
+async function openLuckyOrderModal(user: ManagedUser) {
+  const defaultLuckyAmount = Math.max(
+    1,
+    Math.min(100, Math.floor(Number(user.balance || 100)))
+  );
+
+  setLuckyUser(user);
+  setLuckyStepNumber("");
+  setLuckyAmount(defaultLuckyAmount);
+  setLuckyProfitRate(5);
+  setLuckyProductId("");
+  setSuccessText("");
+  setErrorText("");
+
+  const { data, error } = await supabase
+    .from("products")
+    .select("id, name, price, category, main_image")
+    .in("product_type", ["normal", "lucky"])
+    .eq("is_active", true)
+    .eq("stock_status", "in_stock")
+    .order("price", { ascending: true });
+
+  if (error) {
+    setErrorText(error.message);
+    return;
+  }
+
+  const products = (data || []) as LuckyProductOption[];
+  setLuckyProducts(products);
+
+// Keep empty for Auto mode.
+// The modal still previews the recommended product,
+// and handleInjectLuckyOrder will use the closest product automatically.
+setLuckyProductId("");
+}
+
+async function handleInjectLuckyOrder() {
+  if (!luckyUser) return;
+
+const isSilentBoost = Number(luckyAmount || 0) === 0;
+
+const selectedLuckyProduct =
+  luckyProducts.find((product) => product.id === luckyProductId) ||
+  pickRecommendedLuckyProduct(luckyProducts, luckyAmount);
+
+if (!isSilentBoost && !selectedLuckyProduct) {
+  setErrorText("No available product found for this lucky amount.");
+  return;
+}
+
+  const numericLuckyStep = Number(luckyStepNumber);
+  const luckyStats = orderStatsByUser[luckyUser.id];
+
+  if (!numericLuckyStep || numericLuckyStep < 1) {
+    setErrorText("Enter a valid lucky step number.");
+    return;
+  }
+
+  if (luckyStats?.maxStep && numericLuckyStep > luckyStats.maxStep) {
+    setErrorText(
+      `Step ${numericLuckyStep} does not exist. This user has ${luckyStats.maxStep} generated steps.`
+    );
+    return;
+  }
+
+  if (numericLuckyStep < Number(luckyUser.current_step || 1)) {
+    setErrorText(
+      `Step ${numericLuckyStep} is already passed. Choose Step ${luckyUser.current_step} or a future pending step.`
+    );
+    return;
+  }
+
+if (luckyAmount < 0) {
+  setErrorText("Lucky amount cannot be negative.");
+  return;
+}
+
+  if (luckyProfitRate < 0) {
+    setErrorText("Lucky profit rate cannot be negative.");
+    return;
+  }
+
+  setActionLoading(true);
+  setSuccessText("");
+  setErrorText("");
+
+  const { error } = await supabase.rpc("inject_lucky_order", {
+    p_user_id: luckyUser.id,
+        p_step_number: numericLuckyStep,
+    p_lucky_product_id: selectedLuckyProduct?.id || null,
+    p_lucky_amount: luckyAmount,
+    p_profit_rate_percent: luckyProfitRate,
+  });
+
+  if (error) {
+    setErrorText(error.message);
+    setActionLoading(false);
+    return;
+  }
+
+setSuccessText(
+  isSilentBoost
+    ? `Step ${numericLuckyStep} boosted with ${luckyProfitRate}% profit rate for ${
+        luckyUser.display_name || luckyUser.phone || "user"
+      }. User will still see a normal mission.`
+    : `Lucky order injected at step ${numericLuckyStep} using ${selectedLuckyProduct?.name} for ${
+        luckyUser.display_name || luckyUser.phone || "user"
+      }.`
+);
+  setLuckyUser(null);
+  setLuckyProducts([]);
+  setLuckyProductId("");
+    setLuckyStepNumber("");
+  setLuckyAmount(100);
+  setLuckyProfitRate(5);
+  setActionLoading(false);
+  loadUsers();
+}
+
+async function openViewOrdersModal(user: ManagedUser) {
+  setViewOrdersUser(user);
+  setViewOrders([]);
+  setViewOrdersLoading(true);
+  setSuccessText("");
+  setErrorText("");
+
+  const { data, error } = await supabase.rpc(
+    "get_staff_visible_generated_orders",
+    {
+      p_user_id: user.id,
+    }
+  );
+
+  if (error) {
+    setErrorText(error.message);
+    setViewOrdersLoading(false);
+    return;
+  }
+
+  const orders = (data || []) as unknown as GeneratedOrderPreview[];
+
+  setViewOrders(orders);
+  updateUserOrderSummary(user.id, orders);
+  setViewOrdersLoading(false);
+}
+
+async function openEditLuckyOrderModal(order: GeneratedOrderPreview) {
+  if (!viewOrdersUser) return;
+
+  if (order.status !== "pending") {
+    setErrorText("Only pending lucky orders can be edited.");
+    return;
+  }
+
+  const firstItem = order.user_generated_order_items?.[0];
+  const snapshotProductId = firstItem?.product_snapshot?.id;
+
+  setLuckyUser(viewOrdersUser);
+  setLuckyStepNumber(order.step_number);
+  setLuckyAmount(Number(order.order_total || 0));
+  setLuckyProfitRate(
+  Number(order.lucky_profit_rate_percent ?? order.profit_rate ?? 0)
+);
+  setLuckyProductId("");
+  setSuccessText("");
+  setErrorText("");
+
+  const { data, error } = await supabase
+    .from("products")
+    .select("id, name, price, category, main_image")
+    .in("product_type", ["normal", "lucky"])
+    .eq("is_active", true)
+    .eq("stock_status", "in_stock")
+    .order("price", { ascending: true });
+
+  if (error) {
+    setErrorText(error.message);
+    return;
+  }
+
+  const products = (data || []) as LuckyProductOption[];
+  setLuckyProducts(products);
+
+  const existingProductStillAvailable =
+    snapshotProductId &&
+    products.some((product) => product.id === snapshotProductId);
+
+  if (existingProductStillAvailable) {
+    setLuckyProductId(snapshotProductId);
+    return;
+  }
+
+setLuckyProductId("");
+}
+
+async function handleDeleteGeneratedOrder(order: GeneratedOrderPreview) {
+  if (!viewOrdersUser) return;
+
+  if (order.status !== "pending") {
+    setErrorText("Only pending orders can be deleted.");
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Delete Step ${order.step_number}? Completed orders cannot be deleted.`
+  );
+
+  if (!confirmed) return;
+
+  setActionLoading(true);
+  setSuccessText("");
+  setErrorText("");
+
+  const remainingPendingOrders = viewOrders
+    .filter((item) => item.id !== order.id && item.status === "pending")
+    .sort((a, b) => a.step_number - b.step_number);
+
+  const nextStep =
+    viewOrdersUser.current_step === order.step_number
+      ? remainingPendingOrders[0]?.step_number || viewOrdersUser.current_step
+      : viewOrdersUser.current_step;
+
+  const { error: itemError } = await supabase
+    .from("user_generated_order_items")
+    .delete()
+    .eq("order_id", order.id);
+
+  if (itemError) {
+    setErrorText(itemError.message);
+    setActionLoading(false);
+    return;
+  }
+
+  const { error: orderError } = await supabase
+    .from("user_generated_orders")
+    .delete()
+    .eq("id", order.id)
+    .eq("user_id", viewOrdersUser.id)
+    .eq("status", "pending");
+
+  if (orderError) {
+    setErrorText(orderError.message);
+    setActionLoading(false);
+    return;
+  }
+
+  if (nextStep !== viewOrdersUser.current_step) {
+    await supabase
+      .from("profiles")
+      .update({ current_step: nextStep })
+      .eq("id", viewOrdersUser.id);
+  }
+
+  setViewOrders((current) => current.filter((item) => item.id !== order.id));
+
+  setUsers((currentUsers) =>
+    currentUsers.map((user) =>
+      user.id === viewOrdersUser.id
+        ? { ...user, current_step: nextStep }
+        : user
+    )
+  );
+
+  setViewOrdersUser({ ...viewOrdersUser, current_step: nextStep });
+
+  setSuccessText(`Step ${order.step_number} deleted.`);
+  setActionLoading(false);
+}
+
+async function handleResetGeneratedOrders() {
+  if (!resetOrdersUser) return;
+
+  if (resetOrdersConfirmText !== "RESET") {
+    setErrorText("Type RESET to confirm.");
+    return;
+  }
+
+  setActionLoading(true);
+  setSuccessText("");
+  setErrorText("");
+
+const { error } = await supabase.rpc("reset_user_generated_orders", {
+  p_user_id: resetOrdersUser.id,
+  p_reset_step: resetOrdersResetStep,
+  p_reset_balance: resetOrdersResetBalance,
+});
+
+  if (error) {
+    setErrorText(error.message);
+    setActionLoading(false);
+    return;
+  }
+
+  setSuccessText(
+    `Generated orders reset for ${
+      resetOrdersUser.display_name || resetOrdersUser.phone || "user"
+    }.`
+  );
+
+  setResetOrdersUser(null);
+  setResetOrdersConfirmText("");
+  setResetOrdersResetStep(true);
+  setResetOrdersResetBalance(true);
+  setViewOrdersUser(null);
+  setViewOrders([]);
+  setActionLoading(false);
+  loadUsers();
+}
+
+  async function handleAdjustBalance() {
+    if (!selectedUser) return;
+
+    setActionLoading(true);
+    setSuccessText("");
+    setErrorText("");
+
+    const { error } = await supabase.rpc("admin_adjust_user_balance", {
+      input_user_id: selectedUser.id,
+      input_amount: adjustAmount,
+      input_note: adjustNote || t.adjustModal.defaultNote,
+    });
+
+    if (error) {
+      setErrorText(error.message);
+      setActionLoading(false);
+      return;
+    }
+
+    setSuccessText(t.messages.balanceAdjusted);
+    setSelectedUser(null);
+    setAdjustAmount(100);
+    setAdjustNote("");
+    setActionLoading(false);
+    loadUsers();
+  }
+
+  async function handleSaveNickname() {
+  if (!nicknameUser) return;
+
+  setActionLoading(true);
+  setSuccessText("");
+  setErrorText("");
+
+  const cleanNickname = nicknameValue.trim();
+
+const { error } = await supabase.rpc("admin_upsert_user_nickname", {
+  input_user_id: nicknameUser.id,
+  input_nickname: cleanNickname,
+});
+
+  if (error) {
+    setErrorText(error.message);
+    setActionLoading(false);
+    return;
+  }
+
+  setUsers((currentUsers) =>
+    currentUsers.map((user) =>
+      user.id === nicknameUser.id
+        ? { ...user, admin_nickname: cleanNickname || null }
+        : user
+    )
+  );
+
+  setSuccessText(t.messages.nicknameSaved);
+  setNicknameUser(null);
+  setNicknameValue("");
+  setActionLoading(false);
+}
+
+async function handleSaveReferralCode() {
+  if (!referralUser) return;
+
+  if (!isAdmin && referralUser.role !== "user") {
+    setErrorText("Leader/support can only edit normal user referral codes.");
+    return;
+  }
+
+  const cleanCode = referralValue
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9_-]/g, "")
+    .slice(0, 20);
+
+  if (cleanCode.length < 4) {
+    setErrorText(t.messages.referralCodeInvalid);
+    return;
+  }
+
+  if (cleanCode === referralUser.referral_code) {
+    setReferralUser(null);
+    setReferralValue("");
+    return;
+  }
+
+  setActionLoading(true);
+  setSuccessText("");
+  setErrorText("");
+
+  const { data, error } = await supabase.rpc(
+    "admin_update_user_referral_code",
+    {
+      input_user_id: referralUser.id,
+      input_referral_code: cleanCode,
+    }
+  );
+
+  if (error) {
+    const message = error.message.toLowerCase();
+
+    if (
+      error.code === "23505" ||
+      message.includes("duplicate") ||
+      message.includes("unique") ||
+      message.includes("already exists")
+    ) {
+      setErrorText(t.messages.referralCodeDuplicate);
+    } else if (message.includes("invalid")) {
+      setErrorText(t.messages.referralCodeInvalid);
+    } else {
+      setErrorText(error.message);
+    }
+
+    setActionLoading(false);
+    return;
+  }
+
+  const savedCode =
+    Array.isArray(data) && data[0]?.referral_code
+      ? data[0].referral_code
+      : cleanCode;
+
+  setUsers((currentUsers) =>
+    currentUsers.map((user) =>
+      user.id === referralUser.id
+        ? { ...user, referral_code: savedCode }
+        : user
+    )
+  );
+
+  setSuccessText(t.messages.referralCodeSaved);
+  setReferralUser(null);
+  setReferralValue("");
+
+  await loadUsers();
+
+  setActionLoading(false);
+}
+
+async function handleSaveReferralBonus() {
+  if (!referralBonusUser) return;
+
+  if (referralBonusAmount < 0) {
+    setErrorText("Referral bonus cannot be negative.");
+    return;
+  }
+
+  setActionLoading(true);
+  setSuccessText("");
+  setErrorText("");
+
+  const { data, error } = await supabase.rpc(
+    "admin_set_user_referral_bonus_balance",
+    {
+      input_user_id: referralBonusUser.id,
+      input_referral_bonus_balance: referralBonusAmount,
+    }
+  );
+
+  if (error) {
+    setErrorText(error.message);
+    setActionLoading(false);
+    return;
+  }
+
+  const newReferral = Number(
+    data?.new_referral_bonus_balance ?? referralBonusAmount
+  );
+
+  const newBalance = Number(
+    data?.balance_after ??
+      Number(referralBonusUser.deposited_balance || 0) +
+        newReferral +
+        Number(referralBonusUser.task_profit_balance || 0)
+  );
+
+  setUsers((currentUsers) =>
+    currentUsers.map((user) =>
+      user.id === referralBonusUser.id
+        ? {
+            ...user,
+            referral_bonus_balance: newReferral,
+            balance: newBalance,
+          }
+        : user
+    )
+  );
+
+  setSuccessText(t.messages.referralBonusUpdated);
+  setReferralBonusUser(null);
+  setReferralBonusAmount(0);
+  setActionLoading(false);
+}
+
+async function handleSendUserMessage(subject: string, message: string) {
+  if (!messageUser) return;
+
+  if (messageUser.role !== "user") {
+    setErrorText("Only normal users can receive direct notices.");
+    return;
+  }
+
+  setActionLoading(true);
+  setSuccessText("");
+  setErrorText("");
+
+  const { error } = await supabase.rpc("staff_start_user_chat", {
+    p_user_id: messageUser.id,
+    p_subject: subject,
+    p_message: message,
+  });
+
+  if (error) {
+    setErrorText(error.message);
+    setActionLoading(false);
+    return;
+  }
+
+  setSuccessText(
+    `Notice sent to ${messageUser.display_name || messageUser.phone || "user"}.`
+  );
+
+  setMessageUser(null);
+  setActionLoading(false);
+}
+
+async function handleDeleteUser() {
+  if (!deleteUser) return;
+
+  if (deleteUser.id === profile.id) {
+    setErrorText(t.messages.cannotDeleteSelf);
+    return;
+  }
+
+  if (deleteUser.role !== "user") {
+    setErrorText("Only normal user accounts can be deleted.");
+    return;
+  }
+
+  if (deleteConfirmText !== "DELETE") {
+    setErrorText(t.messages.typeDelete);
+    return;
+  }
+
+  setActionLoading(true);
+  setSuccessText("");
+  setErrorText("");
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    setErrorText("Staff session expired. Please login again.");
+    setActionLoading(false);
+    return;
+  }
+
+  const response = await fetch("/api/admin/delete-user", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({
+      userId: deleteUser.id,
+    }),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    setErrorText(result.error || "Failed to delete user.");
+    setActionLoading(false);
+    return;
+  }
+
+  setUsers((currentUsers) =>
+    currentUsers.filter((user) => user.id !== deleteUser.id)
+  );
+
+  setSuccessText(t.messages.userRemoved);
+  setDeleteUser(null);
+  setDeleteConfirmText("");
+  setActionLoading(false);
+  loadUsers();
+}
+
+  if (!hasPageAccess) {
+    return (
+      <main className="min-h-screen bg-[#050505] p-6 text-white">
+        <div className="mx-auto max-w-xl rounded-[2rem] border border-red-400/30 bg-red-500/10 p-8 text-center">
+          <ShieldCheck className="mx-auto mb-4 h-12 w-12 text-red-300" />
+          <h1 className="text-2xl font-black">{t.accessRequiredTitle}</h1>
+<p className="mt-2 text-sm text-white/55">
+  {t.accessRequiredDescription}
+</p>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+  <main className="min-h-screen overflow-x-hidden bg-[#050505] text-white">
+  <div className="w-full px-3 py-4 sm:px-5">
+        <AdminNav language={currentLanguage} profile={profile} />
+
+        <div className="mb-5 flex items-center justify-between gap-5">
+          <div>
+            <p className="text-sm font-bold text-yellow-200/80">
+  {t.pageTag}
+</p>
+<h1 className="mt-1 text-3xl font-black">{t.title}</h1>
+<p className="mt-2 max-w-2xl text-sm text-white/50">
+  {t.description}
+</p>
+          </div>
+
+        </div>
+
+        {successText && (
+          <div className="mb-5 flex items-center gap-2 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+            <CheckCircle className="h-4 w-4" />
+            {successText}
+          </div>
+        )}
+
+        {errorText && (
+          <div className="mb-5 flex items-center gap-2 rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+            <AlertCircle className="h-4 w-4" />
+            {errorText}
+          </div>
+        )}
+<section className="overflow-hidden rounded-[28px] border border-yellow-400/20 bg-white text-slate-950 shadow-[0_28px_90px_rgba(0,0,0,0.45)]">
+  <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-[#171006] px-5 py-5 text-white">
+    <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.22em] text-yellow-300">
+          {t.panel.tag}
+        </p>
+
+        <h2 className="mt-1 text-2xl font-black tracking-tight">
+          {t.panel.title}
+        </h2>
+
+        <p className="mt-1 max-w-2xl text-sm font-medium text-white/55">
+          Clean user control, wallet balance, campaign progress, and account tools.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="rounded-xl border border-yellow-400/30 bg-yellow-400/10 px-4 py-2 text-xs font-black text-yellow-200">
+          {filteredUsers.length} shown / {users.length} total
+        </div>
+
+        <button
+          type="button"
+          onClick={loadUsers}
+          className="rounded-xl border border-white/10 bg-white/10 px-4 py-2 text-xs font-black text-white/80 transition hover:bg-white/15"
+        >
+          Refresh
+        </button>
+
+        <button
+          type="button"
+          onClick={exportUsersToCsv}
+          className="rounded-xl border border-emerald-400/25 bg-emerald-400/15 px-4 py-2 text-xs font-black text-emerald-200 transition hover:bg-emerald-400/20"
+        >
+          Export CSV
+        </button>
+      </div>
+    </div>
+
+    <div className="mt-5 grid grid-cols-2 gap-3 lg:max-w-xl">
+  <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+    <p className="text-[11px] font-black uppercase tracking-wide text-white/45">
+      Users
+    </p>
+    <p className="mt-1 text-2xl font-black text-white">
+      {users.length}
+    </p>
+  </div>
+
+  <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+<p className="text-[11px] font-black uppercase tracking-wide text-white/45">
+  Online
+</p>
+<p className="mt-1 text-2xl font-black text-emerald-200">
+  {users.filter((item) => isOnline(item)).length}
+</p>
+  </div>
+</div>
+
+    <div className="mt-5 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-[1.4fr_0.7fr_0.8fr_0.9fr_0.55fr]">
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+        <input
+          value={searchText}
+          onChange={(event) => setSearchText(event.target.value)}
+          placeholder={t.filters.searchPlaceholder}
+          className="h-11 w-full rounded-xl border border-white/10 bg-black/35 py-2 pl-10 pr-3 text-sm font-semibold text-white outline-none placeholder:text-white/30 focus:border-yellow-400/60"
+        />
+      </div>
+
+      <select
+        value={roleFilter}
+        onChange={(event) =>
+          setRoleFilter(
+            event.target.value as "all" | "user" | "admin" | "leader" | "support"
+          )
+        }
+        className="h-11 rounded-xl border border-white/10 bg-black/35 px-3 text-sm font-black text-white outline-none focus:border-yellow-400/60"
+      >
+        <option className="bg-slate-950" value="all">
+          {t.filters.allRoles}
+        </option>
+        <option className="bg-slate-950" value="user">
+          {t.filters.users}
+        </option>
+        <option className="bg-slate-950" value="admin">
+          {t.filters.admin}
+        </option>
+<option className="bg-slate-950" value="leader">
+  Leader
+</option>
+        <option className="bg-slate-950" value="support">
+          {t.filters.support}
+        </option>
+      </select>
+
+      <select
+        value={statusFilter}
+        onChange={(event) => setStatusFilter(event.target.value)}
+        className="h-11 rounded-xl border border-white/10 bg-black/35 px-3 text-sm font-black text-white outline-none focus:border-yellow-400/60"
+      >
+        <option className="bg-slate-950" value="all">
+          {t.filters.allStatus}
+        </option>
+        {userStatuses.map((status) => (
+          <option key={status} className="bg-slate-950" value={status}>
+            {status}
+          </option>
+        ))}
+      </select>
+
+      <select
+        value={sortBy}
+        onChange={(event) =>
+          setSortBy(
+            event.target.value as
+              | "newest"
+              | "name"
+              | "balance_high"
+              | "today_high"
+              | "step_high"
+          )
+        }
+        className="h-11 rounded-xl border border-white/10 bg-black/35 px-3 text-sm font-black text-white outline-none focus:border-yellow-400/60"
+      >
+        <option className="bg-slate-950" value="newest">
+          {t.filters.newestFirst}
+        </option>
+        <option className="bg-slate-950" value="name">
+          {t.filters.nameAz}
+        </option>
+        <option className="bg-slate-950" value="balance_high">
+          {t.filters.balanceHigh}
+        </option>
+        <option className="bg-slate-950" value="today_high">
+          {t.filters.todayHigh}
+        </option>
+        <option className="bg-slate-950" value="step_high">
+          {t.filters.stepHigh}
+        </option>
+      </select>
+
+      <select
+        value={pageSize}
+        onChange={(event) => setPageSize(Number(event.target.value))}
+        className="h-11 rounded-xl border border-white/10 bg-black/35 px-3 text-sm font-black text-white outline-none focus:border-yellow-400/60"
+      >
+        <option className="bg-slate-950" value={10}>10 rows</option>
+        <option className="bg-slate-950" value={25}>25 rows</option>
+        <option className="bg-slate-950" value={50}>50 rows</option>
+        <option className="bg-slate-950" value={100}>100 rows</option>
+      </select>
+    </div>
+
+    <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-[0.7fr_0.7fr_0.7fr_0.7fr_auto]">
+      <input
+        value={minBalanceFilter}
+        onChange={(event) => setMinBalanceFilter(event.target.value)}
+        type="number"
+        placeholder={t.filters.minBalance}
+        className="h-10 rounded-xl border border-white/10 bg-black/25 px-3 text-xs font-bold text-white outline-none placeholder:text-white/30 focus:border-yellow-400/60"
+      />
+
+      <input
+        value={maxBalanceFilter}
+        onChange={(event) => setMaxBalanceFilter(event.target.value)}
+        type="number"
+        placeholder={t.filters.maxBalance}
+        className="h-10 rounded-xl border border-white/10 bg-black/25 px-3 text-xs font-bold text-white outline-none placeholder:text-white/30 focus:border-yellow-400/60"
+      />
+
+      <input
+        value={minStepFilter}
+        onChange={(event) => setMinStepFilter(event.target.value)}
+        type="number"
+        placeholder={t.filters.minStep}
+        className="h-10 rounded-xl border border-white/10 bg-black/25 px-3 text-xs font-bold text-white outline-none placeholder:text-white/30 focus:border-yellow-400/60"
+      />
+
+      <input
+        value={maxStepFilter}
+        onChange={(event) => setMaxStepFilter(event.target.value)}
+        type="number"
+        placeholder={t.filters.maxStep}
+        className="h-10 rounded-xl border border-white/10 bg-black/25 px-3 text-xs font-bold text-white outline-none placeholder:text-white/30 focus:border-yellow-400/60"
+      />
+
+      <button
+        type="button"
+        onClick={() => {
+          setSearchText("");
+          setRoleFilter("all");
+          setStatusFilter("all");
+          setSortBy("newest");
+          setMinBalanceFilter("");
+          setMaxBalanceFilter("");
+          setMinStepFilter("");
+          setMaxStepFilter("");
+        }}
+        className="h-10 rounded-xl border border-red-300/25 bg-red-400/10 px-4 text-xs font-black text-red-100 transition hover:bg-red-400/15"
+      >
+        Clear
+      </button>
+    </div>
+  </div>
+
+  {loading && (
+    <div className="p-10 text-center text-sm font-bold text-slate-500">
+      {t.loadingUsers}
+    </div>
+  )}
+
+  {!loading && filteredUsers.length === 0 && (
+    <div className="p-12 text-center">
+      <Users className="mx-auto mb-3 h-10 w-10 text-yellow-500" />
+      <p className="text-lg font-black text-slate-950">{t.noUsersFound}</p>
+      <p className="mt-2 text-sm font-medium text-slate-500">
+        {t.noUsersNote}
+      </p>
+    </div>
+  )}
+
+  {!loading && filteredUsers.length > 0 && (
+    <>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[1380px] border-collapse text-left text-xs">
+          <thead className="bg-slate-50 text-[11px] uppercase tracking-[0.12em] text-slate-500">
+            <tr>
+              <th className="border-b border-slate-200 px-5 py-4">
+                User
+              </th>
+              <th className="border-b border-slate-200 px-4 py-4">
+                Wallet
+              </th>
+              <th className="border-b border-slate-200 px-4 py-4">
+                Earnings
+              </th>
+              <th className="border-b border-slate-200 px-4 py-4">
+                Campaign
+              </th>
+              <th className="border-b border-slate-200 px-4 py-4">
+                Account
+              </th>
+              <th className="border-b border-slate-200 px-5 py-4 text-right">
+                Controls
+              </th>
+            </tr>
+          </thead>
+
+          <tbody className="divide-y divide-slate-200">
+  {paginatedUsers.map((user) => {
+    const isUserAdmin = user.role === "admin";
+    const userIsOnline = isOnline(user);
+    const displayBalance = getDisplayBalance(user);
+    const depositBalance = Number(user.deposited_balance || 0);
+    const referralBalance = Number(user.referral_bonus_balance || 0);
+    const profitBalance = Number(user.task_profit_balance || 0);
+    const orderSummary = orderStatsByUser[user.id];
+
+    const campaignTotal = orderSummary?.maxStep || 0;
+    const completedOrders = orderSummary?.completedOrders || 0;
+    const pendingOrders = orderSummary?.pendingOrders || 0;
+    const luckySteps = orderSummary?.luckySteps || [];
+
+    const progressPercent =
+      campaignTotal > 0
+        ? Math.min(100, Math.round((completedOrders / campaignTotal) * 100))
+        : 0;
+
+    return (
+      <tr
+        key={user.id}
+        className={`bg-white transition hover:bg-yellow-50/50 ${
+          user.status === "active" ? "border-l-4 border-l-emerald-400" : "border-l-4 border-l-red-400"
+        }`}
+      >
+        <td className="px-5 py-3 align-middle">
+          <div className="flex min-w-[340px] items-center gap-3">
+            <div
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${
+                isUserAdmin
+                  ? "border-amber-200 bg-amber-50 text-amber-700"
+                  : "border-blue-100 bg-blue-50 text-blue-700"
+              }`}
+            >
+              {isUserAdmin ? (
+                <Crown className="h-4 w-4" />
+              ) : (
+                <Users className="h-4 w-4" />
+              )}
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="max-w-[170px] truncate text-sm font-black text-slate-950">
+                  {user.display_name || t.row.noName}
+                </p>
+
+<span
+  className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase ${
+    userIsOnline
+      ? "bg-emerald-100 text-emerald-700"
+      : "bg-slate-100 text-slate-500"
+  }`}
+>
+  {userIsOnline ? "Online" : "Offline"}
+</span>
+
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-black uppercase text-slate-600">
+                  {user.role}
+                </span>
+              </div>
+
+<p className="mt-0.5 truncate text-xs font-semibold text-slate-600">
+  Phone:{" "}
+  <b className="font-black text-slate-900">
+    {user.phone || "-"}
+  </b>
+</p>
+
+<div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-bold text-slate-500">
+  <span>
+    ID:{" "}
+    <b className="text-slate-900">
+      {user.member_id || shortId(user.id)}
+    </b>
+  </span>
+</div>
+
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => {
+                    setNicknameUser(user);
+                    setNicknameValue(user.admin_nickname || "");
+                  }}
+                  disabled={!canEditUserInfo}
+                  className="rounded-md border border-yellow-200 bg-yellow-50 px-2 py-0.5 text-[10px] font-black text-yellow-700 hover:bg-yellow-100 disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  Note: {user.admin_nickname || "None"}
+                </button>
+
+<button
+  onClick={() => {
+    setReferralUser(user);
+    setReferralValue(user.referral_code || "");
+  }}
+  disabled={!canEditReferralCode || (!isAdmin && user.role !== "user")}
+  className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-black text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-35"
+>
+  Own Code: {user.referral_code || "-"}
+</button>
+
+{user.role === "user" && (
+  <div className="w-full rounded-lg border border-indigo-100 bg-indigo-50 px-2 py-1.5 text-[10px] font-bold text-indigo-700">
+    <p className="font-black uppercase tracking-wide text-indigo-500">
+      Joined By
+    </p>
+
+    {user.referral_parent ? (
+      <>
+<p className="mt-0.5 truncate text-[11px] font-black text-slate-950">
+  {user.referral_parent.display_name ||
+    user.referral_parent.phone ||
+    "Unknown"}
+</p>
+
+        <p className="mt-0.5 text-[10px] text-indigo-700">
+          Code:{" "}
+          <b className="text-slate-950">
+            {user.referral_parent.referral_code || "-"}
+          </b>
+          {" · "}
+          ID:{" "}
+          <b className="text-slate-950">
+            {user.referral_parent.member_id ||
+              shortId(user.referral_parent.id)}
+          </b>
+        </p>
+      </>
+    ) : (
+      <p className="mt-0.5 text-[10px] font-black text-slate-500">
+        Direct signup / No referral
+      </p>
+    )}
+  </div>
+)}
+              </div>
+            </div>
+          </div>
+        </td>
+
+        <td className="px-4 py-3 align-middle">
+          <div className="min-w-[210px]">
+            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">
+              Total Balance
+            </p>
+
+            <p className="text-2xl font-black leading-tight tracking-tight text-slate-950">
+              {formatMoney(displayBalance)}
+            </p>
+
+            <div className="mt-2 space-y-1 border-t border-slate-100 pt-2">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="font-black uppercase text-blue-700">
+                  Deposit
+                </span>
+                <span className="font-black text-slate-950">
+                  {formatMoney(depositBalance)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="font-black uppercase text-amber-700">
+                  Referral
+                </span>
+                <span className="font-black text-slate-950">
+                  {formatMoney(referralBalance)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="font-black uppercase text-emerald-700">
+                  Profit
+                </span>
+                <span className="font-black text-slate-950">
+                  {formatMoney(profitBalance)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </td>
+
+        <td className="px-4 py-3 align-middle">
+          <div className="min-w-[150px] space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase text-slate-400">
+                Today
+              </span>
+              <span className="text-sm font-black text-slate-950">
+                {formatMoney(user.today_earnings)}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between border-t border-slate-100 pt-2">
+              <span className="text-[10px] font-black uppercase text-slate-400">
+                Total
+              </span>
+              <span className="text-sm font-black text-slate-950">
+                {formatMoney(user.total_earnings)}
+              </span>
+            </div>
+          </div>
+        </td>
+
+        <td className="px-4 py-3 align-middle">
+          <div className="min-w-[260px]">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">
+                  Campaign
+                </p>
+
+                <p className="text-lg font-black text-slate-950">
+                  {campaignTotal > 0
+                    ? `${completedOrders}/${campaignTotal}`
+                    : "No orders"}
+                </p>
+              </div>
+
+              <div className="text-right">
+                <p className="text-[10px] font-black uppercase text-slate-400">
+                  Step
+                </p>
+
+                <p className="text-xl font-black text-slate-950">
+                  {user.current_step}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-yellow-400 to-emerald-400"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700">
+                Done {completedOrders}
+              </span>
+
+              <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-700">
+                Left {pendingOrders}
+              </span>
+
+              <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-black text-slate-700">
+                {progressPercent}%
+              </span>
+            </div>
+
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-2">
+              <span className="text-[10px] font-black uppercase text-slate-400">
+                Lucky:
+              </span>
+
+              {luckySteps.length > 0 ? (
+                <>
+                  {luckySteps.slice(0, 5).map((step) => (
+                    <span
+                      key={step}
+                      className="rounded-md bg-fuchsia-100 px-2 py-0.5 text-[10px] font-black text-fuchsia-700"
+                    >
+                      {step}/{campaignTotal || step}
+                    </span>
+                  ))}
+
+                  {luckySteps.length > 5 && (
+                    <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-black text-slate-600">
+                      +{luckySteps.length - 5}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span className="text-[10px] font-bold text-slate-400">
+                  No lucky bonus
+                </span>
+              )}
+            </div>
+          </div>
+        </td>
+
+        <td className="px-4 py-3 align-middle">
+          <div className="min-w-[145px] space-y-1 text-[11px] font-bold text-slate-500">
+            <div>
+<span
+  className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-black uppercase ${
+    userIsOnline
+      ? "bg-emerald-100 text-emerald-700"
+      : "bg-slate-100 text-slate-500"
+  }`}
+>
+  {userIsOnline ? "Online" : "Offline"}
+</span>
+            </div>
+
+            <p>
+              Role:{" "}
+              <b className="text-slate-950">{user.role}</b>
+            </p>
+
+            <p>
+              Created:{" "}
+              <b className="text-slate-950">{formatDate(user.created_at)}</b>
+            </p>
+
+            <p>
+              Lang:{" "}
+              <b className="text-slate-950">{user.language || "en"}</b>
+            </p>
+          </div>
+        </td>
+
+        <td className="px-5 py-3 align-middle">
+          <div className="flex min-w-[270px] flex-wrap justify-end gap-1.5">
+            <button
+  onClick={() => {
+    setMessageUser(user);
+    setSuccessText("");
+    setErrorText("");
+  }}
+  disabled={!isStaffControlRole || user.role !== "user"}
+  className="inline-flex items-center justify-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1.5 text-[11px] font-black text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-35"
+>
+  <MessageCircle className="h-3.5 w-3.5" />
+  Message
+</button>
+            <button
+              onClick={() => openGenerateOrdersModal(user)}
+              disabled={!canManageOrders || user.role !== "user"}
+              className="inline-flex items-center justify-center gap-1 rounded-lg bg-yellow-400 px-2.5 py-1.5 text-[11px] font-black text-slate-950 hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              <PackagePlus className="h-3.5 w-3.5" />
+              Generate
+            </button>
+
+            <button
+              onClick={() => openViewOrdersModal(user)}
+              disabled={!canManageOrders || user.role !== "user"}
+              className="inline-flex items-center justify-center gap-1 rounded-lg bg-slate-900 px-2.5 py-1.5 text-[11px] font-black text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              Orders
+            </button>
+
+            <button
+              onClick={() => openLuckyOrderModal(user)}
+              disabled={!canManageOrders || user.role !== "user"}
+              className="inline-flex items-center justify-center gap-1 rounded-lg bg-fuchsia-500 px-2.5 py-1.5 text-[11px] font-black text-white hover:bg-fuchsia-400 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Lucky
+            </button>
+
+            <button
+              onClick={() => {
+                setSelectedUser(user);
+                setAdjustAmount(100);
+                setAdjustNote("");
+              }}
+              disabled={!canManageMoney}
+              className="inline-flex items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-black text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Balance
+            </button>
+
+            <button
+              onClick={() => {
+                setReferralBonusUser(user);
+                setReferralBonusAmount(Number(user.referral_bonus_balance || 0));
+              }}
+              disabled={!canManageMoney || user.role !== "user"}
+              className="inline-flex items-center justify-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] font-black text-amber-700 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              Referral
+            </button>
+
+            <button
+              onClick={() => openSecurityReset(user)}
+              disabled={!canManageSecurity}
+              className="inline-flex items-center justify-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-[11px] font-black text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Security
+            </button>
+
+            <button
+              onClick={() => {
+  setResetOrdersUser(user);
+  setResetOrdersConfirmText("");
+  setResetOrdersResetStep(true);
+  setResetOrdersResetBalance(true);
+}}
+              disabled={!canManageOrders || user.role !== "user"}
+              className="inline-flex items-center justify-center gap-1 rounded-lg border border-orange-200 bg-orange-50 px-2.5 py-1.5 text-[11px] font-black text-orange-700 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Reset
+            </button>
+
+            <button
+              onClick={() => {
+                setDeleteUser(user);
+                setDeleteConfirmText("");
+              }}
+              disabled={
+                !canDeleteUsers ||
+                user.id === profile.id ||
+                user.role !== "user"
+              }
+              className="inline-flex items-center justify-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-[11px] font-black text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete
+            </button>
+          </div>
+        </td>
+      </tr>
+    );
+  })}
+</tbody>
+        </table>
+      </div>
+
+      <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4 text-xs font-bold text-slate-500 md:flex-row md:items-center md:justify-between">
+        <p>
+          Showing{" "}
+          <span className="font-black text-slate-950">{firstResult}</span>
+          {" - "}
+          <span className="font-black text-slate-950">{lastResult}</span>
+          {" of "}
+          <span className="font-black text-yellow-700">
+            {filteredUsers.length}
+          </span>{" "}
+          users
+        </p>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+            className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-black text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+            Prev
+          </button>
+
+          <div className="rounded-xl border border-yellow-200 bg-yellow-50 px-3 py-2 text-[11px] font-black text-yellow-700">
+            Page {currentPage} / {totalPages}
+          </div>
+
+          <button
+            type="button"
+            disabled={currentPage === totalPages}
+            onClick={() =>
+              setCurrentPage((page) => Math.min(totalPages, page + 1))
+            }
+            className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-black text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Next
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+    </>
+  )}
+</section>
+
+{messageUser && (
+  <UserMessageModal
+    user={messageUser}
+    fallbackName={t.list.fallbackName}
+    actionLoading={actionLoading}
+    onClose={() => setMessageUser(null)}
+    onSubmit={handleSendUserMessage}
+  />
+)}
+
+{generateUser && (
+  <GenerateOrdersModal
+    user={generateUser}
+    fallbackName={t.list.fallbackName}
+    taskCount={generateTaskCount}
+    profitRate={generateProfitRate}
+    resetExisting={generateResetExisting}
+    actionLoading={actionLoading}
+    t={t.generateModal}
+    onTaskCountChange={setGenerateTaskCount}
+    onProfitRateChange={setGenerateProfitRate}
+    onResetExistingChange={setGenerateResetExisting}
+    onClose={() => setGenerateUser(null)}
+    onSubmit={handleGenerateOrders}
+  />
+)}
+
+{luckyUser && (
+  <LuckyOrderModal
+    user={luckyUser}
+    fallbackName={t.list.fallbackName}
+    totalSteps={
+      orderStatsByUser[luckyUser.id]?.maxStep ||
+      orderStatsByUser[luckyUser.id]?.totalOrders ||
+      0
+    }
+    pendingOrders={orderStatsByUser[luckyUser.id]?.pendingOrders || 0}
+    luckyProducts={luckyProducts}
+    recommendedProduct={pickRecommendedLuckyProduct(
+      luckyProducts,
+      luckyAmount
+    )}
+    selectedProductId={luckyProductId}
+    stepNumber={luckyStepNumber}
+    luckyAmount={luckyAmount}
+    profitRate={luckyProfitRate}
+    actionLoading={actionLoading}
+    t={t.luckyModal}
+    onProductChange={setLuckyProductId}
+    onStepNumberChange={setLuckyStepNumber}
+    onLuckyAmountChange={setLuckyAmount}
+    onProfitRateChange={setLuckyProfitRate}
+    onClose={() => {
+      setLuckyUser(null);
+      setLuckyProducts([]);
+      setLuckyProductId("");
+      setLuckyStepNumber("");
+    }}
+    onSubmit={handleInjectLuckyOrder}
+  />
+)}
+
+{viewOrdersUser && (
+  <ViewOrdersModal
+  user={viewOrdersUser}
+  fallbackName={t.list.fallbackName}
+  orders={viewOrders}
+  loading={viewOrdersLoading}
+  t={t.viewOrdersModal}
+  onDeleteOrder={handleDeleteGeneratedOrder}
+  onEditLuckyOrder={openEditLuckyOrderModal}
+  onClose={() => {
+    setViewOrdersUser(null);
+    setViewOrders([]);
+  }}
+/>
+)}
+
+{resetOrdersUser && (
+  <ResetOrdersModal
+  user={resetOrdersUser}
+  fallbackName={t.list.fallbackName}
+  confirmText={resetOrdersConfirmText}
+  resetStep={resetOrdersResetStep}
+  resetBalance={resetOrdersResetBalance}
+  actionLoading={actionLoading}
+      t={t.resetOrdersModal}
+    onConfirmTextChange={setResetOrdersConfirmText}
+    onResetStepChange={setResetOrdersResetStep}
+    onResetBalanceChange={setResetOrdersResetBalance}
+    onClose={() => {
+  setResetOrdersUser(null);
+  setResetOrdersConfirmText("");
+  setResetOrdersResetStep(true);
+  setResetOrdersResetBalance(true);
+}}
+    onSubmit={handleResetGeneratedOrders}
+  />
+)}
+
+{selectedUser && (
+  <AdjustBalanceModal
+    user={selectedUser}
+    fallbackName={t.list.fallbackName}
+    amount={adjustAmount}
+    note={adjustNote}
+    actionLoading={actionLoading}
+    t={t.adjustModal}
+    onAmountChange={setAdjustAmount}
+    onNoteChange={setAdjustNote}
+    onClose={() => setSelectedUser(null)}
+    onSubmit={handleAdjustBalance}
+  />
+)}
+
+{securityUser && (
+  <SecurityResetModal
+    user={securityUser}
+    fallbackName={t.list.fallbackName}
+    noEmailText={t.list.noEmail}
+    resetPassword={resetPassword}
+    resetPasscode={resetPasscode}
+    resetResult={resetResult}
+    actionLoading={actionLoading}
+      t={t.securityModal}
+    onPasswordChange={setResetPassword}
+    onPasscodeChange={setResetPasscode}
+    onGeneratePassword={() => setResetPassword(generateTemporaryPassword())}
+    onGeneratePasscode={() => setResetPasscode(generateSixDigitPasscode())}
+    onResetLoginPassword={handleResetLoginPassword}
+    onResetWithdrawPasscode={handleResetWithdrawPasscode}
+    onClose={() => {
+      setSecurityUser(null);
+      setResetPassword("");
+      setResetPasscode("");
+      setResetResult("");
+    }}
+  />
+)}
+
+{deleteUser && (
+  <DeleteUserModal
+    user={deleteUser}
+    fallbackName={t.list.fallbackName}
+    noEmailText={t.list.noEmail}
+    confirmText={deleteConfirmText}
+    actionLoading={actionLoading}
+    t={t.deleteModal}
+    onConfirmTextChange={setDeleteConfirmText}
+    onClose={() => {
+      setDeleteUser(null);
+      setDeleteConfirmText("");
+    }}
+    onSubmit={handleDeleteUser}
+  />
+)}
+
+{nicknameUser && (
+  <NicknameModal
+    user={nicknameUser}
+    fallbackName={t.list.fallbackName}
+    noEmailText={t.list.noEmail}
+    nicknameValue={nicknameValue}
+    actionLoading={actionLoading}
+    t={t.nicknameModal}
+    onNicknameChange={setNicknameValue}
+    onClose={() => {
+      setNicknameUser(null);
+      setNicknameValue("");
+    }}
+    onSubmit={handleSaveNickname}
+  />
+)}
+      </div>
+
+{referralUser && (
+  <ReferralCodeModal
+    user={referralUser}
+    fallbackName={t.list.fallbackName}
+    referralValue={referralValue}
+    actionLoading={actionLoading}
+    t={t.referralModal}
+    onReferralChange={setReferralValue}
+    onClose={() => {
+      setReferralUser(null);
+      setReferralValue("");
+    }}
+    onSubmit={handleSaveReferralCode}
+  />
+)}
+{referralBonusUser && (
+  <ReferralBonusModal
+    user={referralBonusUser}
+    fallbackName={t.list.fallbackName}
+    amount={referralBonusAmount}
+    actionLoading={actionLoading}
+    t={t.referralBonusModal}
+    onAmountChange={setReferralBonusAmount}
+    onClose={() => {
+      setReferralBonusUser(null);
+      setReferralBonusAmount(0);
+    }}
+    onSubmit={handleSaveReferralBonus}
+  />
+)}
+
+    </main>
+  );
+}

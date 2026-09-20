@@ -1,0 +1,427 @@
+import { Eye, Pencil, Trash2, X } from "lucide-react";
+
+type ModalUser = {
+  display_name: string | null;
+  email: string | null;
+};
+
+type GeneratedOrderItemPreview = {
+  id: string;
+  product_snapshot: {
+    id?: string;
+    name?: string;
+    main_image?: string | null;
+    category?: string;
+    custom_lucky_amount?: string | number;
+  };
+  unit_price: number;
+  quantity: number;
+  subtotal: number;
+};
+
+type GeneratedOrderPreview = {
+  id: string;
+  step_number: number;
+  order_total: number;
+  profit_rate: number;
+  profit_amount: number;
+  lucky_profit_rate_percent: number | null;
+  lucky_profit_amount: number;
+  campaign_base_amount: number | null;
+  normal_task_rate: number | null;
+  order_type: "normal" | "lucky";
+  status: "pending" | "completed" | "cancelled";
+  is_lucky_bonus: boolean;
+  created_at: string;
+  completed_at: string | null;
+  user_generated_order_items?: GeneratedOrderItemPreview[];
+};
+
+type ViewOrdersModalText = {
+  tag: string;
+  title: string;
+  description: string;
+  user: string;
+  total: string;
+  completed: string;
+  pending: string;
+  lucky: string;
+  loading: string;
+  noOrdersTitle: string;
+  noOrdersDescription: string;
+  step: string;
+  product: string;
+  type: string;
+  orderTotal: string;
+  profit: string;
+  status: string;
+  completedDate: string;
+  generatedProduct: string;
+  qty: string;
+  subtotal: string;
+  normal: string;
+  cancelled: string;
+};
+
+type ViewOrdersModalProps = {
+  user: ModalUser;
+  fallbackName: string;
+  orders: GeneratedOrderPreview[];
+  loading: boolean;
+  t?: Partial<ViewOrdersModalText>;
+  onClose: () => void;
+  onDeleteOrder: (order: GeneratedOrderPreview) => void;
+  onEditLuckyOrder: (order: GeneratedOrderPreview) => void;
+};
+
+const defaultViewOrdersModalText: ViewOrdersModalText = {
+  tag: "Generated Orders",
+  title: "Order Sequence",
+  description: "Review generated campaign orders, lucky steps, and status.",
+  user: "User",
+  total: "Total",
+  completed: "Completed",
+  pending: "Pending",
+  lucky: "Lucky",
+  loading: "Loading generated orders...",
+  noOrdersTitle: "No generated orders",
+  noOrdersDescription: "Generate orders first before viewing this list.",
+  step: "Step",
+  product: "Product",
+  type: "Type",
+  orderTotal: "Order Total",
+  profit: "Profit",
+  status: "Status",
+  completedDate: "Completed Date",
+  generatedProduct: "Generated Product",
+  qty: "Qty",
+  subtotal: "Subtotal",
+  normal: "Normal",
+  cancelled: "Cancelled",
+};
+
+function MiniBox({
+  label,
+  value,
+  color = "white",
+}: {
+  label: string;
+  value: string;
+  color?: "white" | "gold";
+}) {
+  return (
+    <div className="rounded-2xl bg-black/30 p-3">
+      <p className="text-xs text-white/45">{label}</p>
+      <p
+        className={`mt-1 truncate font-bold ${
+          color === "gold" ? "text-yellow-300" : "text-white/75"
+        }`}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+export default function ViewOrdersModal({
+  user,
+  fallbackName,
+  orders,
+  loading,
+  t,
+  onClose,
+  onDeleteOrder,
+  onEditLuckyOrder,
+}: ViewOrdersModalProps) {
+  const text = {
+    ...defaultViewOrdersModalText,
+    ...(t || {}),
+  };
+
+  const completedCount = orders.filter(
+    (order) => order.status === "completed"
+  ).length;
+
+  const pendingCount = orders.filter(
+    (order) => order.status === "pending"
+  ).length;
+
+  const luckyCount = orders.filter((order) => order.is_lucky_bonus).length;
+
+  function getStatusText(status: GeneratedOrderPreview["status"]) {
+    if (status === "completed") return text.completed;
+    if (status === "pending") return text.pending;
+    return text.cancelled;
+  }
+
+  return (
+    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/75 px-6 backdrop-blur-sm">
+      <div className="w-full max-w-6xl rounded-[2rem] border border-blue-400/25 bg-[#090909] p-6 shadow-[0_0_60px_rgba(59,130,246,0.18)]">
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm text-blue-200/80">{text.tag}</p>
+            <h2 className="text-2xl font-black">{text.title}</h2>
+            <p className="mt-1 text-sm text-white/45">{text.description}</p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-2xl bg-white/10 p-3 text-white/70 hover:bg-white/15"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-5">
+          <MiniBox
+            label={text.user}
+            value={user.display_name || user.email || fallbackName}
+          />
+
+          <MiniBox
+            label={text.total}
+            value={String(orders.length)}
+            color="gold"
+          />
+
+          <MiniBox label={text.completed} value={String(completedCount)} />
+
+          <MiniBox label={text.pending} value={String(pendingCount)} />
+
+          <MiniBox label={text.lucky} value={String(luckyCount)} color="gold" />
+        </div>
+
+        {loading && (
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-center text-white/55">
+            {text.loading}
+          </div>
+        )}
+
+        {!loading && orders.length === 0 && (
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-8 text-center">
+            <Eye className="mx-auto mb-3 h-10 w-10 text-blue-300" />
+            <p className="font-black text-white">{text.noOrdersTitle}</p>
+            <p className="mt-2 text-sm text-white/45">
+              {text.noOrdersDescription}
+            </p>
+          </div>
+        )}
+
+        {!loading && orders.length > 0 && (
+          <div className="max-h-[620px] overflow-auto rounded-2xl border border-white/10">
+            <table className="w-full min-w-[1180px] text-left text-sm">
+              <thead className="sticky top-0 z-10 bg-[#151515] text-xs uppercase tracking-wide text-white/45">
+                <tr>
+                  <th className="px-4 py-3">{text.step}</th>
+                  <th className="px-4 py-3">{text.product}</th>
+                  <th className="px-4 py-3">{text.type}</th>
+                  <th className="px-4 py-3">{text.orderTotal}</th>
+                  <th className="px-4 py-3">{text.profit}</th>
+                  <th className="px-4 py-3">{text.status}</th>
+                  <th className="px-4 py-3">{text.completedDate}</th>
+                  <th className="px-4 py-3 text-right">Action</th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-white/10">
+                {orders.map((order) => {
+                  const firstItem = order.user_generated_order_items?.[0];
+
+                  const normalProfit = Number(order.profit_amount || 0);
+                  let luckyProfit = Number(order.lucky_profit_amount || 0);
+
+                  // Dynamically project expected profit for pending lucky orders
+                  if (
+                    luckyProfit === 0 &&
+                    (order.is_lucky_bonus || order.order_type === "lucky") &&
+                    order.status === "pending"
+                  ) {
+                    if (order.lucky_profit_rate_percent != null && order.lucky_profit_rate_percent > 0) {
+                      luckyProfit = (Number(order.order_total || 0) * Number(order.lucky_profit_rate_percent)) / 100;
+                    } else {
+                      // Fallback to base profit just in case
+                      luckyProfit = normalProfit; 
+                    }
+                  }
+
+                  const totalStepProfit = order.is_lucky_bonus || order.order_type === "lucky"
+                    ? luckyProfit
+                    : normalProfit;
+
+                  const campaignRate = Number(order.normal_task_rate || 0);
+                  const rateText =
+                    campaignRate > 0
+                      ? campaignRate.toFixed(3)
+                      : `${Number(order.profit_rate || 0).toFixed(2)}%`;
+
+                  return (
+                    <tr
+                      key={order.id}
+                      className={
+                        order.is_lucky_bonus
+                          ? "bg-fuchsia-500/[0.07] hover:bg-fuchsia-500/[0.11]"
+                          : "bg-black/20 hover:bg-white/[0.04]"
+                      }
+                    >
+                      <td className="px-4 py-4 font-black text-yellow-300">
+                        #{order.step_number}
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <p className="font-bold text-white">
+                          {firstItem?.product_snapshot?.name ||
+                            text.generatedProduct}
+                        </p>
+
+                        <p className="mt-1 text-xs text-white/45">
+                          {text.qty} {firstItem?.quantity || 1} ·{" "}
+                          {text.subtotal} $
+                          {Number(
+                            firstItem?.subtotal || order.order_total
+                          ).toFixed(2)}
+                        </p>
+
+                        {order.is_lucky_bonus && (
+                          <p className="mt-1 text-[11px] font-bold text-fuchsia-200">
+                            Lucky custom amount: $
+                            {Number(
+                              firstItem?.product_snapshot?.custom_lucky_amount ||
+                                order.order_total ||
+                                0
+                            ).toFixed(2)}
+                          </p>
+                        )}
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-black ${
+                            order.is_lucky_bonus
+                              ? "bg-fuchsia-500/20 text-fuchsia-200"
+                              : "bg-blue-500/15 text-blue-300"
+                          }`}
+                        >
+                          {order.is_lucky_bonus ? "Lucky Bonus" : text.normal}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-4 font-black text-white">
+                        ${Number(order.order_total || 0).toFixed(2)}
+                      </td>
+
+                      <td className="px-4 py-4">
+                        {order.is_lucky_bonus ? (
+                          <div className="min-w-[150px] rounded-xl border border-fuchsia-400/20 bg-fuchsia-400/10 p-3">
+                            <p className="text-[10px] font-black uppercase tracking-wide text-fuchsia-200/70">
+                              Lucky Profit
+                            </p>
+
+                            <p className="mt-1 text-lg font-black text-fuchsia-100">
+                              ${totalStepProfit.toFixed(2)}
+                            </p>
+
+                            <div className="mt-2 space-y-1 border-t border-fuchsia-300/15 pt-2 text-[11px]">
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="font-bold text-white/45">
+                                  Lucky Amount
+                                </span>
+                                <span className="font-black text-fuchsia-200">
+                                  ${Number(order.order_total || 0).toFixed(2)}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="font-bold text-white/35">
+                                  Lucky Rate
+                                </span>
+                                <span className="font-black text-white/60">
+                                  {Number(
+                                    order.lucky_profit_rate_percent || 0
+                                  ).toFixed(2)}
+                                  %
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="min-w-[130px]">
+                            <p className="font-black text-emerald-300">
+                              ${normalProfit.toFixed(2)}
+                            </p>
+
+                            <p className="mt-1 text-xs font-bold text-white/40">
+                              Rate {rateText}
+                            </p>
+
+                            {order.campaign_base_amount !== null &&
+                              order.campaign_base_amount !== undefined && (
+                                <p className="mt-1 text-[11px] text-white/30">
+                                  Base $
+                                  {Number(
+                                    order.campaign_base_amount || 0
+                                  ).toFixed(2)}
+                                </p>
+                              )}
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-black ${
+                            order.status === "completed"
+                              ? "bg-emerald-400/15 text-emerald-300"
+                              : order.status === "pending"
+                                ? "bg-yellow-400/15 text-yellow-300"
+                                : "bg-red-400/15 text-red-300"
+                          }`}
+                        >
+                          {getStatusText(order.status)}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-4 text-xs text-white/45">
+                        {order.completed_at
+                          ? new Date(order.completed_at).toLocaleString()
+                          : "-"}
+                      </td>
+
+                      <td className="px-4 py-4 text-right">
+                        {order.status === "pending" ? (
+                          <div className="flex justify-end gap-2">
+                            {order.is_lucky_bonus && (
+                              <button
+                                type="button"
+                                onClick={() => onEditLuckyOrder(order)}
+                                className="inline-flex items-center gap-1 rounded-lg bg-fuchsia-500/15 px-3 py-1.5 text-xs font-black text-fuchsia-200 hover:bg-fuchsia-500/25"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                                Edit Lucky
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => onDeleteOrder(order)}
+                              className="inline-flex items-center gap-1 rounded-lg bg-red-500/15 px-3 py-1.5 text-xs font-black text-red-300 hover:bg-red-500/25"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Delete
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-white/30">Locked</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

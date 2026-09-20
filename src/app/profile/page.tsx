@@ -1,0 +1,623 @@
+//app>profile>page.tsx
+
+"use client";
+
+import LuxuryCard from "@/components/ui/LuxuryCard";
+import StatCard from "@/components/ui/StatCard";
+import { getLanguage, messages, type Language } from "@/i18n";
+import { useEffect, useState } from "react";
+import AppShell from "@/components/layout/AppShell";
+import RequireAuth from "@/components/auth/RequireAuth";
+import { supabase } from "@/lib/supabaseClient";
+import { useRouter } from "next/navigation";
+import type { Profile } from "@/types/profile";
+import {
+  User,
+  Wallet,
+  Download,
+  Upload,
+  History,
+  Headphones,
+  ShieldCheck,
+  LogOut,
+  ChevronRight,
+  ClipboardList,
+  Copy,
+  CheckCircle,
+  Gem,
+  Languages,
+} from "lucide-react";
+
+const menuItems = [
+  {
+    key: "customerSupport",
+    icon: Headphones,
+    href: "/support",
+    featured: true,
+    danger: false,
+    subtitleKey: "customerSupport",
+  },
+{
+  key: "depositCredits",
+  icon: Download,
+  href: "/deposit",
+  featured: false,
+  danger: false,
+  subtitleKey: null,
+},
+{
+  key: "withdrawRequest",
+  icon: Upload,
+  href: "/withdraw",
+  featured: false,
+  danger: false,
+  subtitleKey: null,
+},
+  {
+    key: "depositRecord",
+    icon: ClipboardList,
+    href: "/wallet-records?type=deposit_credit",
+    featured: false,
+    danger: false,
+    subtitleKey: null,
+  },
+  {
+    key: "withdrawalRecord",
+    icon: ClipboardList,
+    href: "/wallet-records?type=withdrawal",
+    featured: false,
+    danger: false,
+    subtitleKey: null,
+  },
+  {
+    key: "taskHistory",
+    icon: History,
+    href: "/history",
+    featured: false,
+    danger: false,
+    subtitleKey: null,
+  },
+  {
+    key: "transactionDetails",
+    icon: History,
+    href: "/transactions",
+    featured: false,
+    danger: false,
+    subtitleKey: null,
+  },
+
+  {
+    key: "termsSecurity",
+    icon: ShieldCheck,
+    href: "/terms",
+    featured: false,
+    danger: false,
+    subtitleKey: null,
+  },
+] as const;
+
+type SupportTicketPreview = {
+  id: string;
+};
+
+type SupportChatPreview = {
+  id: string;
+  created_at: string;
+};
+
+export default function ProfilePage() {
+  return (
+    <RequireAuth>
+      {(profile) => <ProfileContent profile={profile} />}
+    </RequireAuth>
+  );
+}
+
+function ProfileContent({ profile }: { profile: Profile }) {
+  const router = useRouter();
+
+ const [language, setLanguage] = useState<Language>(
+  getLanguage(profile.language)
+);
+const [savingLanguage, setSavingLanguage] = useState(false);
+const [showLanguageModal, setShowLanguageModal] = useState(false);
+
+  const t = messages[language];
+
+const [assignedTotal, setAssignedTotal] = useState<number | null>(null);
+const [copied, setCopied] = useState(false);
+const [hasUnreadSupport, setHasUnreadSupport] = useState(false);
+
+  useEffect(() => {
+    if (profile.role === "admin") {
+      router.replace("/admin");
+    }
+  }, [profile.role, router]);
+
+  useEffect(() => {
+    async function loadAssignedCount() {
+      const { count } = await supabase
+        .from("user_generated_orders")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", profile.id);
+
+      setAssignedTotal(count || 0);
+    }
+
+    if (profile.role === "user") {
+      loadAssignedCount();
+    }
+  }, [profile.id, profile.role]);
+
+  useEffect(() => {
+  let mounted = true;
+
+  async function loadUnreadSupport() {
+    if (profile.role !== "user") return;
+
+    const lastSeenKey = `golden_axis_support_seen_${profile.id}`;
+    const lastSeen = localStorage.getItem(lastSeenKey) || "";
+
+    const { data: ticketData } = await supabase
+      .from("support_messages")
+      .select("id")
+      .eq("user_id", profile.id)
+      .neq("status", "closed");
+
+    if (!mounted) return;
+
+    const ticketRows = (ticketData || []) as SupportTicketPreview[];
+    const ticketIds = ticketRows.map((ticket) => ticket.id);
+
+    if (ticketIds.length === 0) {
+      setHasUnreadSupport(false);
+      return;
+    }
+
+    let query = supabase
+      .from("support_chat_messages")
+      .select("id, created_at")
+      .in("ticket_id", ticketIds)
+      .eq("sender_role", "admin")
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (lastSeen) {
+      query = query.gt("created_at", lastSeen);
+    }
+
+    const { data: chatData } = await query;
+
+    if (!mounted) return;
+
+    const rows = (chatData || []) as SupportChatPreview[];
+    setHasUnreadSupport(rows.length > 0);
+  }
+
+  loadUnreadSupport();
+
+  const channel = supabase
+    .channel(`profile-support-unread-${profile.id}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "support_messages",
+        filter: `user_id=eq.${profile.id}`,
+      },
+      () => {
+        loadUnreadSupport();
+      }
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "support_chat_messages",
+      },
+      () => {
+        loadUnreadSupport();
+      }
+    )
+    .subscribe();
+
+  return () => {
+    mounted = false;
+    supabase.removeChannel(channel);
+  };
+}, [profile.id, profile.role]);
+
+async function handleLanguageChange(nextLanguage: Language) {
+  if (nextLanguage === language || savingLanguage) return;
+
+  const oldLanguage = language;
+
+  setLanguage(nextLanguage);
+  setSavingLanguage(true);
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ language: nextLanguage })
+    .eq("id", profile.id);
+
+  if (error) {
+  console.error("Language update failed:", error.message);
+  alert(error.message);
+  setLanguage(oldLanguage);
+  setSavingLanguage(false);
+  return;
+}
+
+localStorage.setItem("golden_axis_language", nextLanguage);
+window.dispatchEvent(
+  new CustomEvent("golden-axis-language-change", {
+    detail: nextLanguage,
+  })
+);
+
+setSavingLanguage(false);
+}
+
+function handleMenuClick(item: (typeof menuItems)[number]) {
+  if (item.href === "/support") {
+    localStorage.setItem(
+      `golden_axis_support_seen_${profile.id}`,
+      new Date().toISOString()
+    );
+    setHasUnreadSupport(false);
+  }
+
+  router.push(item.href);
+}
+
+async function handleLogout() {
+  await supabase.auth.signOut();
+  router.replace("/login");
+}
+
+  async function copyReferralCode() {
+  if (!profile.referral_code) return;
+
+  await navigator.clipboard.writeText(profile.referral_code);
+  setCopied(true);
+
+  setTimeout(() => {
+    setCopied(false);
+  }, 1500);
+}
+
+
+  if (profile.role === "admin") {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#050505] text-white">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-2 border-yellow-300 border-t-transparent" />
+          <p className="text-sm text-white/60">{t.profile.openingAdmin}</p>
+        </div>
+      </main>
+    );
+  }
+
+  const completedCount = Math.max(profile.current_step - 1, 0);
+  const missionTotalText =
+    assignedTotal === null ? "..." : assignedTotal > 0 ? assignedTotal : "-";
+
+const rawMainBalance = Number(profile.balance || 0);
+const depositedBalance = Number(profile.deposited_balance || 0);
+const referralBalance = Number(profile.referral_bonus_balance || 0);
+const taskProfitBalance = Number(profile.task_profit_balance || 0);
+
+const hasSplitBalances =
+  profile.deposited_balance !== undefined ||
+  profile.referral_bonus_balance !== undefined ||
+  profile.task_profit_balance !== undefined;
+
+const splitBalance = Number(
+  (depositedBalance + referralBalance + taskProfitBalance).toFixed(2)
+);
+
+// After split-balance SQL fix, profile.balance already represents the total.
+// Do not add deposited_balance again.
+const profileTotalBalance = hasSplitBalances ? splitBalance : rawMainBalance;
+  return (
+    <AppShell>
+      <section className="px-5 pb-44 pt-7">
+                <LuxuryCard goldGlow className="mb-5 p-5">
+          <div className="flex items-center gap-4">
+            <div className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-[1.7rem] border border-yellow-400/40 bg-yellow-400/10 shadow-[0_0_35px_rgba(212,175,55,0.2)]">
+              <div className="absolute inset-0 rounded-[1.7rem] bg-yellow-300/15 blur-xl" />
+              <User className="relative h-10 w-10 text-yellow-300" />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="mb-1 flex items-center gap-2">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,0.8)]" />
+                <p className="text-xs font-bold text-emerald-200">
+                  {t.profile.accountCenterOnline}
+                </p>
+              </div>
+
+              <h1 className="truncate text-2xl font-black">
+                {profile.display_name || t.profile.goldMember}
+              </h1>
+
+<p className="mt-1 truncate text-sm text-white/50">
+  Phone:{" "}
+  <span className="font-bold text-white/65">
+    {profile.phone || "-"}
+  </span>
+</p>
+
+<div className="mt-3 flex flex-wrap items-center gap-2">
+  <div className="inline-flex items-center gap-2 rounded-full border border-yellow-400/20 bg-yellow-400/10 px-3 py-1 text-xs font-bold text-yellow-200">
+    <Gem className="h-3.5 w-3.5" />
+    {t.profile.goldenAxisMember}
+  </div>
+
+  <div className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/25 px-3 py-1 text-xs font-bold text-white/65">
+    ID: <span className="text-white">{profile.member_id || profile.id.slice(0, 8)}</span>
+  </div>
+</div>
+            </div>
+          </div>
+        </LuxuryCard>
+
+        <div className="mb-5 flex justify-end">
+  <button
+    type="button"
+    onClick={handleLogout}
+    className="inline-flex items-center gap-2 rounded-full border border-red-400/20 bg-red-500/[0.08] px-4 py-2 text-xs font-bold text-red-100 transition active:scale-95"
+  >
+    <LogOut className="h-4 w-4" />
+    Logout
+  </button>
+</div>
+
+        <LuxuryCard goldGlow className="mb-6 p-5">
+  <div className="mb-5 flex items-center justify-between">
+    <div>
+      <p className="text-sm text-white/50">{t.profile.campaignBalance}</p>
+      <h2 className="mt-1 text-3xl font-black">
+  ${profileTotalBalance.toFixed(2)}
+</h2>
+    </div>
+
+<button
+  type="button"
+  aria-label="Open deposit page"
+  onClick={() => router.push("/deposit")}
+  className="rounded-2xl bg-gradient-to-br from-yellow-300 to-yellow-600 p-3 text-black shadow-[0_0_25px_rgba(234,179,8,0.35)] transition hover:brightness-110 active:scale-95"
+>
+  <Wallet className="h-7 w-7" />
+</button>
+  </div>
+
+  <div className="grid grid-cols-3 gap-3 text-center">
+    <button
+      type="button"
+      onClick={copyReferralCode}
+      className="rounded-[1.25rem] border border-yellow-400/25 bg-yellow-400/10 px-3 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_10px_25px_rgba(0,0,0,0.25)] active:scale-[0.98]"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-yellow-100/60">Referral Code</p>
+
+        {copied ? (
+          <CheckCircle className="h-3.5 w-3.5 text-emerald-300" />
+        ) : (
+          <Copy className="h-3.5 w-3.5 text-white/35" />
+        )}
+      </div>
+
+      <p className="mt-1 truncate font-black text-yellow-300">
+        {profile.referral_code}
+      </p>
+    </button>
+
+    <StatCard
+      label={t.profile.today}
+      value={`$${Number(profile.today_earnings).toFixed(2)}`}
+      color="green"
+    />
+
+    <StatCard
+      label={t.profile.missions}
+      value={`${completedCount}/${missionTotalText}`}
+      color="blue"
+    />
+  </div>
+
+  {copied && (
+    <p className="mt-3 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-center text-xs text-emerald-200">
+      Referral code copied
+    </p>
+  )}
+</LuxuryCard>
+
+<div className="mb-6 grid grid-cols-2 gap-3">
+  <StatCard
+    label={t.profile.totalEarnings}
+    value={`$${Number(profile.total_earnings).toFixed(2)}`}
+    color="gold"
+  />
+
+  <StatCard
+    label={t.profile.creditScore}
+    value={String(profile.credit_score)}
+    color="green"
+  />
+</div>
+
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-lg font-black">{t.profile.memberCenter}</h3>
+          <span className="text-xs font-bold text-yellow-300">
+            {t.profile.secureTools}
+          </span>
+        </div>
+
+<LuxuryCard className="mb-8 overflow-hidden p-0">
+  {menuItems.map((item) => {
+    const Icon = item.icon;
+
+    return (
+      <button
+        key={item.key}
+        onClick={() => handleMenuClick(item)}
+        className={`flex w-full items-center justify-between border-b border-white/10 px-5 py-4 text-left transition active:scale-[0.99] hover:bg-white/[0.035] ${
+          item.featured
+            ? "bg-gradient-to-r from-yellow-400/20 via-yellow-400/10 to-transparent"
+            : ""
+        }`}
+      >
+        <div className="flex items-center gap-3">
+<div
+  className={`relative flex h-11 w-11 items-center justify-center rounded-2xl ${
+    item.featured
+      ? "bg-gradient-to-br from-yellow-300 to-yellow-600 text-black shadow-[0_0_25px_rgba(234,179,8,0.35)]"
+      : "bg-yellow-400/10 text-yellow-300"
+  }`}
+>
+  {item.key === "customerSupport" && hasUnreadSupport && (
+    <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5">
+      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-70" />
+      <span className="relative inline-flex h-3.5 w-3.5 rounded-full border border-black bg-red-500" />
+    </span>
+  )}
+
+  <Icon className="h-5 w-5" />
+</div>
+
+          <div className="text-left">
+<div className="flex items-center gap-2">
+  <span
+    className={`font-medium ${
+      item.featured
+        ? "font-black text-yellow-200"
+        : "text-white/80"
+    }`}
+  >
+    {t.profile.menu[item.key]}
+  </span>
+
+  {item.key === "customerSupport" && hasUnreadSupport && (
+    <span className="rounded-full bg-red-500 px-2 py-0.5 text-[9px] font-black uppercase text-white">
+      New
+    </span>
+  )}
+</div>
+
+            {item.subtitleKey && (
+              <p
+                className={`mt-0.5 text-xs ${
+                  item.featured ? "text-yellow-100/60" : "text-white/40"
+                }`}
+              >
+                {t.profile.menuSubtitles[item.subtitleKey]}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <ChevronRight className="h-5 w-5 text-white/35" />
+      </button>
+    );
+  })}
+
+  <button
+    type="button"
+    onClick={() => setShowLanguageModal(true)}
+    className="flex w-full items-center justify-between px-5 py-4 text-left transition active:scale-[0.99] hover:bg-white/[0.035]"
+  >
+    <div className="flex items-center gap-3">
+      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-yellow-400/10 text-yellow-300">
+        <Languages className="h-5 w-5" />
+      </div>
+
+      <div className="text-left">
+        <span className="font-medium text-white/80">
+          {t.profile.language}
+        </span>
+
+        <p className="mt-0.5 text-xs text-white/40">
+          {language === "en" ? t.profile.english : t.profile.chinese}
+        </p>
+      </div>
+    </div>
+
+    <ChevronRight className="h-5 w-5 text-white/35" />
+  </button>
+</LuxuryCard>
+
+{showLanguageModal && (
+  <div className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/80 px-5 pb-[7.5rem] pt-10 backdrop-blur-sm">
+    <button
+      type="button"
+      aria-label="Close language modal"
+      onClick={() => setShowLanguageModal(false)}
+      className="absolute inset-0"
+    />
+
+    <div className="relative w-full max-w-md rounded-[2rem] border border-yellow-400/25 bg-[#0b0b0b] p-5 shadow-[0_0_60px_rgba(250,204,21,0.18)]">
+      <div className="mb-5 flex items-center justify-between">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-yellow-200/60">
+            {t.profile.language}
+          </p>
+
+          <h2 className="mt-1 text-xl font-black text-white">
+            Select Language
+          </h2>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowLanguageModal(false)}
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white/60"
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="space-y-3">
+        <button
+          type="button"
+          disabled={savingLanguage}
+          onClick={async () => {
+            await handleLanguageChange("en");
+            setShowLanguageModal(false);
+          }}
+          className={`flex w-full items-center justify-between rounded-2xl border px-4 py-4 text-left transition ${
+            language === "en"
+              ? "border-yellow-400/40 bg-yellow-400/15 text-yellow-200"
+              : "border-white/10 bg-white/[0.04] text-white/75"
+          }`}
+        >
+          <span className="font-black">{t.profile.english}</span>
+          {language === "en" && <CheckCircle className="h-5 w-5" />}
+        </button>
+
+        <button
+          type="button"
+          disabled={savingLanguage}
+          onClick={async () => {
+            await handleLanguageChange("zh");
+            setShowLanguageModal(false);
+          }}
+          className={`flex w-full items-center justify-between rounded-2xl border px-4 py-4 text-left transition ${
+            language === "zh"
+              ? "border-yellow-400/40 bg-yellow-400/15 text-yellow-200"
+              : "border-white/10 bg-white/[0.04] text-white/75"
+          }`}
+        >
+          <span className="font-black">{t.profile.chinese}</span>
+          {language === "zh" && <CheckCircle className="h-5 w-5" />}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+      </section>
+    </AppShell>
+  );
+}
