@@ -1,23 +1,23 @@
-//src/app/sitemap.ts
+// src/app/sitemap.ts
 
 import { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
-      url: "https://goldenaxis60.company",
+      url: "https://exfacto.online",
       lastModified: new Date(),
       changeFrequency: "daily",
       priority: 1,
     },
     {
-      url: "https://goldenaxis60.company/terms",
+      url: "https://exfacto.online/terms",
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.8,
     },
     {
-      url: "https://goldenaxis60.company/privacy",
+      url: "https://exfacto.online/privacy",
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.8,

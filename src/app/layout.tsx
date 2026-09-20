@@ -15,20 +15,20 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://goldenaxis60.company"),
+  metadataBase: new URL("https://exfacto.online"),
 
   title: {
-    default: "Golden Axis 60",
-    template: "%s | Golden Axis 60",
+    default: "ExFacto",
+    template: "%s | ExFacto",
   },
 
   description:
-    "Golden Axis 60 is a gold and jewel promotional task simulation platform with account dashboard, campaign records, activity tracking, and customer support.",
+    "ExFacto is a gold and jewel promotional task simulation platform with account dashboard, campaign records, activity tracking, and customer support.",
 
-  applicationName: "Golden Axis 60",
+  applicationName: "ExFacto",
 
   keywords: [
-    "Golden Axis 60",
+    "ExFacto",
     "gold campaign",
     "jewel campaign",
     "promotion dashboard",
@@ -37,24 +37,24 @@ export const metadata: Metadata = {
     "customer support",
   ],
 
-  authors: [{ name: "Golden Axis 60" }],
-  creator: "Golden Axis 60",
-  publisher: "Golden Axis 60",
+  authors: [{ name: "ExFacto" }],
+  creator: "ExFacto",
+  publisher: "ExFacto",
 
   openGraph: {
-    title: "Golden Axis 60",
+    title: "ExFacto",
     description:
-      "Official Golden Axis 60 member portal for campaign tasks, activity records, and customer support.",
-    url: "https://goldenaxis60.company",
-    siteName: "Golden Axis 60",
+      "Official ExFacto member portal for campaign tasks, activity records, and customer support.",
+    url: "https://exfacto.online",
+    siteName: "ExFacto",
     type: "website",
   },
 
   twitter: {
     card: "summary",
-    title: "Golden Axis 60",
+    title: "ExFacto",
     description:
-      "Official Golden Axis 60 member portal for campaign tasks, activity records, and customer support.",
+      "Official ExFacto member portal for campaign tasks, activity records, and customer support.",
   },
 
   icons: {
@@ -80,13 +80,13 @@ export default function RootLayout({
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: "Golden Axis 60",
-    url: "https://goldenaxis60.company",
-    logo: "https://goldenaxis60.company/logo.png",
+    name: "ExFacto",
+    url: "https://exfacto.online",
+    logo: "https://exfacto.online/logo.png",
     contactPoint: {
       "@type": "ContactPoint",
       contactType: "Customer Support",
-      email: "support@goldenaxis60.company",
+      email: "support@exfacto.online",
     },
   };
 

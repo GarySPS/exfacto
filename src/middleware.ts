@@ -1,9 +1,8 @@
-//src>middleware.ts
-
+// src/middleware.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const ADMIN_DOMAINS = ["goldenaxisadmin.vercel.app", "admin.goldenaxis60.company"];
+const ADMIN_DOMAINS = ["admin.exfacto.online", "exfacto.vercel.app"];
 
 export function middleware(request: NextRequest) {
   const host = request.headers.get("host")?.split(":")[0] || "";
