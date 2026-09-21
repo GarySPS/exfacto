@@ -155,9 +155,9 @@ export default function ViewOrdersModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/75 px-6 backdrop-blur-sm">
-      <div className="w-full max-w-6xl rounded-[2rem] border border-blue-400/25 bg-[#090909] p-6 shadow-[0_0_60px_rgba(59,130,246,0.18)]">
-        <div className="mb-6 flex items-center justify-between gap-4">
+    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/75 px-4 py-6 backdrop-blur-sm md:px-6">
+      <div className="flex max-h-[95vh] w-full max-w-7xl flex-col rounded-[2rem] border border-blue-400/25 bg-[#090909] p-4 shadow-[0_0_60px_rgba(59,130,246,0.18)] md:p-6">
+        <div className="mb-6 flex shrink-0 items-center justify-between gap-4">
           <div>
             <p className="text-sm text-blue-200/80">{text.tag}</p>
             <h2 className="text-2xl font-black">{text.title}</h2>
@@ -173,7 +173,7 @@ export default function ViewOrdersModal({
           </button>
         </div>
 
-        <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-5">
+        <div className="mb-5 grid shrink-0 grid-cols-2 gap-3 md:grid-cols-5">
           <MiniBox
             label={text.user}
             value={user.display_name || user.email || fallbackName}
@@ -209,8 +209,8 @@ export default function ViewOrdersModal({
         )}
 
         {!loading && orders.length > 0 && (
-          <div className="max-h-[620px] overflow-auto rounded-2xl border border-white/10">
-            <table className="w-full min-w-[1180px] text-left text-sm">
+          <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-white/10">
+            <table className="w-full min-w-[1050px] text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[#151515] text-xs uppercase tracking-wide text-white/45">
                 <tr>
                   <th className="px-4 py-3">{text.step}</th>

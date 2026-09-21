@@ -168,8 +168,8 @@ const [luckyUser, setLuckyUser] = useState<ManagedUser | null>(null);
 const [luckyProducts, setLuckyProducts] = useState<LuckyProductOption[]>([]);
 const [luckyStepNumber, setLuckyStepNumber] = useState<number | "">("");
 const [luckyProductId, setLuckyProductId] = useState("");
-const [luckyAmount, setLuckyAmount] = useState(2800);
-const [luckyProfitRate, setLuckyProfitRate] = useState(5);
+const [luckyAmount, setLuckyAmount] = useState<number | "">(2800);
+const [luckyProfitRate, setLuckyProfitRate] = useState<number | "">(5);
 const [viewOrdersUser, setViewOrdersUser] = useState<ManagedUser | null>(null);
 const [viewOrders, setViewOrders] = useState<GeneratedOrderPreview[]>([]);
 const [viewOrdersLoading, setViewOrdersLoading] = useState(false);
@@ -469,7 +469,7 @@ function formatMoney(value: number | null | undefined) {
 
 function pickRecommendedLuckyProduct(
   products: LuckyProductOption[],
-  amount: number
+  amount: number | ""
 ) {
   if (products.length === 0) return null;
 
@@ -905,12 +905,12 @@ if (!isSilentBoost && !selectedLuckyProduct) {
     return;
   }
 
-if (luckyAmount < 0) {
+if (luckyAmount === "" || luckyAmount < 0) {
   setErrorText("Lucky amount cannot be negative.");
   return;
 }
 
-  if (luckyProfitRate < 0) {
+  if (luckyProfitRate === "" || luckyProfitRate < 0) {
     setErrorText("Lucky profit rate cannot be negative.");
     return;
   }
@@ -923,8 +923,8 @@ if (luckyAmount < 0) {
     p_user_id: luckyUser.id,
         p_step_number: numericLuckyStep,
     p_lucky_product_id: selectedLuckyProduct?.id || null,
-    p_lucky_amount: luckyAmount,
-    p_profit_rate_percent: luckyProfitRate,
+    p_lucky_amount: Number(luckyAmount),
+    p_profit_rate_percent: Number(luckyProfitRate),
   });
 
   if (error) {

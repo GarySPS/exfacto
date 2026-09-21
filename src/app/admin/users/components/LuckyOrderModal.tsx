@@ -50,14 +50,14 @@ type LuckyOrderModalProps = {
   recommendedProduct: LuckyProductOption | null;
   selectedProductId: string;
   stepNumber: number | "";
-  luckyAmount: number;
-  profitRate: number;
+  luckyAmount: number | "";
+  profitRate: number | "";
   actionLoading: boolean;
   t?: Partial<LuckyOrderModalText>;
   onProductChange: (value: string) => void;
   onStepNumberChange: (value: number | "") => void;
-  onLuckyAmountChange: (value: number) => void;
-  onProfitRateChange: (value: number) => void;
+  onLuckyAmountChange: (value: number | "") => void;
+  onProfitRateChange: (value: number | "") => void;
   onClose: () => void;
   onSubmit: () => void;
 };
@@ -240,9 +240,10 @@ export default function LuckyOrderModal({
 
             <input
               value={luckyAmount}
-              onChange={(event) =>
-                onLuckyAmountChange(Number(event.target.value))
-              }
+              onChange={(event) => {
+                const value = event.target.value;
+                onLuckyAmountChange(value === "" ? "" : Number(value));
+              }}
               type="number"
               min={0}
               step="0.01"
@@ -261,9 +262,10 @@ export default function LuckyOrderModal({
 
             <input
               value={profitRate}
-              onChange={(event) =>
-                onProfitRateChange(Number(event.target.value))
-              }
+              onChange={(event) => {
+                const value = event.target.value;
+                onProfitRateChange(value === "" ? "" : Number(value));
+              }}
               type="number"
               min={0}
               step="0.01"
