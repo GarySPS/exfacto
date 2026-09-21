@@ -18,6 +18,7 @@ import NicknameModal from "./components/NicknameModal";
 import ReferralCodeModal from "./components/ReferralCodeModal";
 import ReferralBonusModal from "./components/ReferralBonusModal";
 import UserMessageModal from "./components/UserMessageModal";
+import CreditScoreModal from "./components/CreditScoreModal";
 import AdminNav from "../AdminNav";
 import { supabase } from "@/lib/supabaseClient";
 import { canAccessAdminPath } from "@/lib/adminPermissions";
@@ -38,6 +39,7 @@ import {
   Sparkles,
   Trash2,
   Users,
+  Award,
 } from "lucide-react";
 
 type ReferralParentInfo = {
@@ -144,7 +146,8 @@ const [selectedUser, setSelectedUser] = useState<ManagedUser | null>(null);
 const [messageUser, setMessageUser] = useState<ManagedUser | null>(null);
 const [nicknameUser, setNicknameUser] = useState<ManagedUser | null>(null);
 const [nicknameValue, setNicknameValue] = useState("");
-
+const [creditUser, setCreditUser] = useState<ManagedUser | null>(null);
+const [creditValue, setCreditValue] = useState(100);
 const [referralUser, setReferralUser] = useState<ManagedUser | null>(null);
 const [referralValue, setReferralValue] = useState("");
 const [referralBonusUser, setReferralBonusUser] =
@@ -1200,6 +1203,37 @@ const { error } = await supabase.rpc("admin_upsert_user_nickname", {
   setActionLoading(false);
 }
 
+async function handleSaveCreditScore() {
+  if (!creditUser) return;
+
+  setActionLoading(true);
+  setSuccessText("");
+  setErrorText("");
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ credit_score: creditValue })
+    .eq("id", creditUser.id);
+
+  if (error) {
+    setErrorText(error.message);
+    setActionLoading(false);
+    return;
+  }
+
+  setUsers((currentUsers) =>
+    currentUsers.map((user) =>
+      user.id === creditUser.id
+        ? { ...user, credit_score: creditValue }
+        : user
+    )
+  );
+
+  setSuccessText("Credit score updated successfully.");
+  setCreditUser(null);
+  setActionLoading(false);
+}
+
 async function handleSaveReferralCode() {
   if (!referralUser) return;
 
@@ -2034,6 +2068,12 @@ async function handleDeleteUser() {
               Lang:{" "}
               <b className="text-slate-950">{user.language || "en"}</b>
             </p>
+
+            <p>
+              Credit:{" "}
+              <b className="text-slate-950">{user.credit_score ?? 100}</b>
+            </p>
+
           </div>
         </td>
 
@@ -2109,6 +2149,18 @@ async function handleDeleteUser() {
             >
               <ShieldCheck className="h-3.5 w-3.5" />
               Security
+            </button>
+
+            <button
+              onClick={() => {
+                setCreditUser(user);
+                setCreditValue(Number(user.credit_score ?? 100));
+              }}
+              disabled={!canEditUserInfo}
+              className="inline-flex items-center justify-center gap-1 rounded-lg border border-cyan-200 bg-cyan-50 px-2.5 py-1.5 text-[11px] font-black text-cyan-700 hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              <Award className="h-3.5 w-3.5" />
+              Credit
             </button>
 
             <button
@@ -2365,6 +2417,21 @@ async function handleDeleteUser() {
       setNicknameValue("");
     }}
     onSubmit={handleSaveNickname}
+  />
+)}
+
+{creditUser && (
+  <CreditScoreModal
+    user={creditUser}
+    fallbackName={t.list.fallbackName}
+    creditValue={creditValue}
+    actionLoading={actionLoading}
+    onCreditChange={setCreditValue}
+    onClose={() => {
+      setCreditUser(null);
+      setCreditValue(100);
+    }}
+    onSubmit={handleSaveCreditScore}
   />
 )}
       </div>
