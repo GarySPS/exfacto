@@ -10,6 +10,7 @@ import AppShell from "@/components/layout/AppShell";
 import RequireAuth from "@/components/auth/RequireAuth";
 import { supabase } from "@/lib/supabaseClient";
 import type { Profile } from "@/types/profile";
+import { sendTelegramNoti } from "@/lib/telegram";
 import {
   Download,
   Lock,
@@ -235,6 +236,15 @@ const mainBalance = availableBalance;
       setLoading(false);
       return;
     }
+
+    const notiMessage = `
+🔴 <b>New Withdraw Request</b>
+<b>User:</b> ${profile.display_name} (<code>${profile.phone}</code>)
+<b>Amount:</b> $${withdrawAmount.toFixed(2)}
+<b>Method:</b> ${asset} ${network}
+<b>Address:</b> <code>${receivingAddress.trim()}</code>
+    `;
+    await sendTelegramNoti('withdraw', notiMessage);
 
     setSuccessText(t.withdraw.successSubmitted);
     setAmount("");

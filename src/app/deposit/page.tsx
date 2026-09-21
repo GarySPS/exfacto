@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import RequireAuth from "@/components/auth/RequireAuth";
 import { supabase } from "@/lib/supabaseClient";
+import { sendTelegramNoti } from "@/lib/telegram";
 import type { Profile } from "@/types/profile";
 import {
   Wallet,
@@ -306,6 +307,30 @@ const finalNote = [
       setLoading(false);
       return;
     }
+
+    let explorerLink = "";
+    const cleanTx = txHash.trim();
+    
+    if (network === "TRC20") {
+      explorerLink = cleanTx ? `https://tronscan.org/#/transaction/${cleanTx}` : `https://tronscan.org/#/address/${depositAddress}`;
+    } else if (network === "ERC20") {
+      explorerLink = cleanTx ? `https://etherscan.io/tx/${cleanTx}` : `https://etherscan.io/address/${depositAddress}`;
+    } else if (network === "BTC") {
+      explorerLink = cleanTx ? `https://www.blockchain.com/explorer/transactions/btc/${cleanTx}` : `https://www.blockchain.com/explorer/addresses/btc/${depositAddress}`;
+    }
+
+    const notiMessage = `
+💰 <b>New Deposit Request</b>
+<b>User:</b> ${profile.display_name} (<code>${profile.phone}</code>)
+<b>Amount:</b> $${finalAmount.toFixed(2)}
+<b>Method:</b> ${getWalletLabel(asset, network)}
+${cleanTx ? `<b>TxHash:</b> <code>${cleanTx}</code>\n` : ''}
+🖼 <a href="${proofImageUrl || ''}">View Proof Image</a>
+
+🔍 <a href="${explorerLink}">Verify on Blockchain</a>
+    `;
+    
+    await sendTelegramNoti('deposit', notiMessage);
 
     setSuccessText(t.deposit.successSubmitted);
     setTxHash("");

@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { guestAuth } from "@/i18n/guestAuth";
 import { useRouter } from "next/navigation";
+import { sendTelegramNoti } from "@/lib/telegram";
 import {
 ArrowRight,
 CheckCircle2,
@@ -181,6 +182,14 @@ async function handleRegister(e: FormEvent<HTMLFormElement>) {
     });
 
     if (signUpError) throw signUpError;
+
+    const notiMessage = `
+🟢 <b>New User Registration</b>
+<b>Name:</b> ${cleanDisplayName}
+<b>Phone:</b> ${cleanPhone}
+<b>Used Referral:</b> ${cleanReferralCode}
+    `;
+    await sendTelegramNoti('register', notiMessage);
 
     // 2. Redirect immediately. The SQL trigger handles everything else.
     router.replace("/");

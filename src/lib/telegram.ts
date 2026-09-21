@@ -1,6 +1,7 @@
 //src>lib>telegram.ts
 
-// src/lib/telegram.ts
+"use server";
+
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
 type TelegramGroup = 'register' | 'deposit' | 'withdraw' | 'transaction';
