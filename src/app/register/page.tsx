@@ -165,7 +165,7 @@ async function handleRegister(e: FormEvent<HTMLFormElement>) {
       return;
     }
 
-    // 1. Send all profile data in one step via metadata
+    // 1. Send ALL data, including the passcode, in one step via metadata
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: hiddenEmail,
       password,
@@ -175,22 +175,14 @@ async function handleRegister(e: FormEvent<HTMLFormElement>) {
           phone: cleanPhone,
           new_referral_code: generateReferralCode(),
           referred_by: referrerProfile.referrer_id,
+          withdraw_passcode: withdrawPasscode, // <-- Added this
         },
       },
     });
 
     if (signUpError) throw signUpError;
 
-    // 2. The profile is already created by the database trigger! Just set the passcode.
-    const { error: passcodeError } = await supabase.rpc(
-      "set_withdraw_passcode",
-      {
-        p_passcode: withdrawPasscode,
-      }
-    );
-
-    if (passcodeError) throw passcodeError;
-
+    // 2. Redirect immediately. The SQL trigger handles everything else.
     router.replace("/");
   } catch (err) {
     const message =
