@@ -165,53 +165,23 @@ async function handleRegister(e: FormEvent<HTMLFormElement>) {
       return;
     }
 
-    const { data: signUpData, error: signUpError } =
-      await supabase.auth.signUp({
-        email: hiddenEmail,
-        password,
-        options: {
-          data: {
-            display_name: cleanDisplayName,
-            phone: cleanPhone,
-            referral_code: cleanReferralCode,
-          },
+    // 1. Send all profile data in one step via metadata
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email: hiddenEmail,
+      password,
+      options: {
+        data: {
+          display_name: cleanDisplayName,
+          phone: cleanPhone,
+          new_referral_code: generateReferralCode(),
+          referred_by: referrerProfile.referrer_id,
         },
-      });
+      },
+    });
 
     if (signUpError) throw signUpError;
 
-    const newUser = signUpData.user;
-
-    if (!newUser) {
-      throw new Error(t.register.errors.sessionNotFound);
-    }
-
-    if (!signUpData.session) {
-      throw new Error(
-        "Email confirmation is still enabled in Supabase. Turn off email confirmation first."
-      );
-    }
-
-    const { error: profileError } = await supabase.from("profiles").insert({
-      id: newUser.id,
-      email: hiddenEmail,
-      phone: cleanPhone,
-      display_name: cleanDisplayName,
-      referral_code: generateReferralCode(),
-      referred_by: referrerProfile.referrer_id,
-      terms_accepted: true,
-      role: "user",
-      balance: 0,
-      today_earnings: 0,
-      total_earnings: 0,
-      current_step: 1,
-      credit_score: 100,
-      status: "active",
-      language: "en",
-    });
-
-    if (profileError) throw profileError;
-
+    // 2. The profile is already created by the database trigger! Just set the passcode.
     const { error: passcodeError } = await supabase.rpc(
       "set_withdraw_passcode",
       {
