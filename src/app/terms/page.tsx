@@ -33,11 +33,11 @@ const certificates: Array<{
 }> = [
   {
     key: "internalQuality",
-    image: "/certificate1.png",
+    image: "/certificate1.jpg",
   },
   {
     key: "certifiedExcellence",
-    image: "/certificate2.png",
+    image: "/certificate2.jpg",
   },
 ];
 
@@ -183,7 +183,7 @@ export default function TermsPage() {
                           alt={t.certificates[certificate.key].title}
                           fill
                           className="object-contain"
-                          priority={certificate.image === "/certificate1.png"}
+                          priority={certificate.image === "/certificate1.jpg"}
                         />
                       </div>
 
