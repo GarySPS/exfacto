@@ -19,6 +19,7 @@ import ReferralCodeModal from "./components/ReferralCodeModal";
 import ReferralBonusModal from "./components/ReferralBonusModal";
 import UserMessageModal from "./components/UserMessageModal";
 import CreditScoreModal from "./components/CreditScoreModal";
+import ChangeRoleModal from "./components/ChangeRoleModal";
 import AdminNav from "../AdminNav";
 import { supabase } from "@/lib/supabaseClient";
 import { canAccessAdminPath } from "@/lib/adminPermissions";
@@ -153,6 +154,8 @@ const [referralValue, setReferralValue] = useState("");
 const [referralBonusUser, setReferralBonusUser] =
   useState<ManagedUser | null>(null);
 const [referralBonusAmount, setReferralBonusAmount] = useState(0);
+const [roleUser, setRoleUser] = useState<ManagedUser | null>(null);
+const [roleValue, setRoleValue] = useState<string>("user");
 
 const [deleteUser, setDeleteUser] = useState<ManagedUser | null>(null);
 const [deleteConfirmText, setDeleteConfirmText] = useState("");
@@ -1203,6 +1206,38 @@ const { error } = await supabase.rpc("admin_upsert_user_nickname", {
   setActionLoading(false);
 }
 
+async function handleSaveRole() {
+  if (!roleUser) return;
+
+  setActionLoading(true);
+  setSuccessText("");
+  setErrorText("");
+
+  // You will create this RPC in Supabase
+  const { error } = await supabase.rpc("admin_change_user_role", {
+    input_user_id: roleUser.id,
+    input_role: roleValue,
+  });
+
+  if (error) {
+    setErrorText(error.message);
+    setActionLoading(false);
+    return;
+  }
+
+  setUsers((currentUsers) =>
+    currentUsers.map((user) =>
+      user.id === roleUser.id 
+        ? { ...user, role: roleValue as "user" | "admin" | "leader" | "support" } 
+        : user
+    )
+  );
+
+  setSuccessText(`User role updated to ${roleValue}`);
+  setRoleUser(null);
+  setActionLoading(false);
+}
+
 async function handleSaveCreditScore() {
   if (!creditUser) return;
 
@@ -2165,6 +2200,18 @@ async function handleDeleteUser() {
 
             <button
               onClick={() => {
+                setRoleUser(user);
+                setRoleValue(user.role);
+              }}
+              disabled={!canEditUserInfo}
+              className="inline-flex items-center justify-center gap-1 rounded-lg border border-purple-200 bg-purple-50 px-2.5 py-1.5 text-[11px] font-black text-purple-700 hover:bg-purple-100 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Role
+            </button>
+
+            <button
+              onClick={() => {
   setResetOrdersUser(user);
   setResetOrdersConfirmText("");
   setResetOrdersResetStep(true);
@@ -2464,6 +2511,21 @@ async function handleDeleteUser() {
       setReferralBonusAmount(0);
     }}
     onSubmit={handleSaveReferralBonus}
+  />
+)}
+
+{roleUser && (
+  <ChangeRoleModal
+    user={roleUser}
+    fallbackName={t.list.fallbackName}
+    roleValue={roleValue}
+    actionLoading={actionLoading}
+    onRoleChange={setRoleValue}
+    onClose={() => {
+      setRoleUser(null);
+      setRoleValue("user");
+    }}
+    onSubmit={handleSaveRole}
   />
 )}
 
