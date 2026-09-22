@@ -2203,7 +2203,7 @@ async function handleDeleteUser() {
                 setRoleUser(user);
                 setRoleValue(user.role);
               }}
-              disabled={!canEditUserInfo}
+              disabled={!isAdmin && profile.role !== "leader"}
               className="inline-flex items-center justify-center gap-1 rounded-lg border border-purple-200 bg-purple-50 px-2.5 py-1.5 text-[11px] font-black text-purple-700 hover:bg-purple-100 disabled:cursor-not-allowed disabled:opacity-35"
             >
               <ShieldCheck className="h-3.5 w-3.5" />
@@ -2517,6 +2517,7 @@ async function handleDeleteUser() {
 {roleUser && (
   <ChangeRoleModal
     user={roleUser}
+    currentUserRole={profile.role}
     fallbackName={t.list.fallbackName}
     roleValue={roleValue}
     actionLoading={actionLoading}

@@ -1,10 +1,11 @@
-//src>app>admin>users>components>ChangeRoleModal.tsx
+//src/app/admin/users/components/ChangeRoleModal.tsx
 
 import { X } from "lucide-react";
 import type { Profile } from "@/types/profile";
 
 export default function ChangeRoleModal({
   user,
+  currentUserRole,
   fallbackName,
   roleValue,
   actionLoading,
@@ -13,6 +14,7 @@ export default function ChangeRoleModal({
   onSubmit,
 }: {
   user: Profile;
+  currentUserRole: string;
   fallbackName: string;
   roleValue: string;
   actionLoading: boolean;
@@ -48,7 +50,12 @@ export default function ChangeRoleModal({
           >
             <option value="user">Normal User</option>
             <option value="support">Support</option>
-            <option value="admin">Admin</option>
+            {currentUserRole === "admin" && (
+              <>
+                <option value="leader">Leader</option>
+                <option value="admin">Admin</option>
+              </>
+            )}
           </select>
         </div>
 
