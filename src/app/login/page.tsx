@@ -155,10 +155,10 @@ useEffect(() => {
     const cleanLoginId = loginId.trim();
     const adminEntrance = isAdminEntrance();
 
-    if (!password || (!adminEntrance && normalizePhoneNumber(cleanLoginId) === "") || (adminEntrance && !cleanLoginId)) {
+    if (!password || !cleanLoginId) {
       setErrorText(
         adminEntrance
-          ? "Please enter your email and password."
+          ? "Please enter your email or phone number and password."
           : "Please enter your phone number and password."
       );
       setLoading(false);
@@ -174,8 +174,10 @@ useEffect(() => {
     }
 
     try {
+      // If Admin entrance and it contains "@", treat as Admin email. 
+      // Otherwise, treat as a Support/Leader phone number and convert it.
       const loginEmail = adminEntrance
-        ? cleanLoginId.toLowerCase()
+        ? (cleanLoginId.includes("@") ? cleanLoginId.toLowerCase() : phoneToHiddenEmail(cleanLoginId))
         : phoneToHiddenEmail(cleanPhone);
 
       const { error } = await supabase.auth.signInWithPassword({
@@ -294,33 +296,33 @@ useEffect(() => {
               <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-yellow-300/70 to-transparent" />
 
               <div className="space-y-4">
-<label className="block">
-  <span className="mb-2 block text-xs font-bold text-white/45">
-    {isAdminPortal ? "Email Address" : "Phone Number"}
-  </span>
+              <label className="block">
+                  <span className="mb-2 block text-xs font-bold text-white/45">
+                    {isAdminPortal ? "Email or Phone" : "Phone Number"}
+                  </span>
 
-  <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/45 px-4 py-3.5 transition focus-within:border-yellow-400/60 focus-within:bg-black/60">
-    {isAdminPortal ? (
-      <Mail className="h-5 w-5 text-yellow-300/80" />
-    ) : (
-      <Phone className="h-5 w-5 text-yellow-300/80" />
-    )}
+                  <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/45 px-4 py-3.5 transition focus-within:border-yellow-400/60 focus-within:bg-black/60">
+                    {isAdminPortal ? (
+                      <ShieldCheck className="h-5 w-5 text-yellow-300/80" />
+                    ) : (
+                      <Phone className="h-5 w-5 text-yellow-300/80" />
+                    )}
 
-    <input
-      value={loginId}
-      onChange={(e) =>
-        setLoginId(
-          isAdminPortal ? e.target.value : formatPhoneInput(e.target.value)
-        )
-      }
-      placeholder={isAdminPortal ? "admin@example.com" : "+1xxx"}
-      type={isAdminPortal ? "email" : "tel"}
-      inputMode={isAdminPortal ? "email" : "numeric"}
-      autoComplete={isAdminPortal ? "email" : "tel"}
-      className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/25"
-    />
-  </div>
-</label>
+                    <input
+                      value={loginId}
+                      onChange={(e) =>
+                        setLoginId(
+                          isAdminPortal ? e.target.value : formatPhoneInput(e.target.value)
+                        )
+                      }
+                      placeholder={isAdminPortal ? "admin@... or +1xxx" : "+1xxx"}
+                      type={isAdminPortal ? "text" : "tel"}
+                      inputMode={isAdminPortal ? "text" : "numeric"}
+                      autoComplete={isAdminPortal ? "username" : "tel"}
+                      className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/25"
+                    />
+                  </div>
+                </label>
 
                 <label className="block">
                   <span className="mb-2 block text-xs font-bold text-white/45">
