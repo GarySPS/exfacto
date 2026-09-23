@@ -51,10 +51,7 @@ export default function ChangeRoleModal({
             <option value="user">Normal User</option>
             <option value="support">Support</option>
             {currentUserRole === "admin" && (
-              <>
-                <option value="leader">Leader</option>
-                <option value="admin">Admin</option>
-              </>
+              <option value="leader">Leader</option>
             )}
           </select>
         </div>
