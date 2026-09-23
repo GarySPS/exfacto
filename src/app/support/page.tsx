@@ -614,21 +614,18 @@ setSubmitting(false);
           </div>
         </LuxuryCard>
 
-        {/* Space so user can scroll past sticky footer */}
-        <div className="h-28" />
-
-        {/* Compact WhatsApp-Style Input Box */}
-        <div className="fixed bottom-[80px] left-0 right-0 z-30 border-t border-white/5 bg-[#050505]/95 px-5 py-3 backdrop-blur-xl md:bottom-[90px]">
-          <div className="mx-auto max-w-md">
+        {/* Compact WhatsApp-Style Input Box (Sticky to fix mobile keyboard) */}
+        <div className="sticky bottom-24 z-30 mx-auto mb-6 w-full max-w-md">
+          <div className="rounded-[2.25rem] border border-white/10 bg-[#0a0a0a]/95 p-2 shadow-[0_15px_45px_rgba(0,0,0,0.6)] backdrop-blur-xl">
             {errorText && (
-              <div className="mb-2 flex items-center gap-2 rounded-xl bg-red-500/10 px-3 py-2 text-xs text-red-200">
+              <div className="mb-2 flex items-center gap-2 rounded-2xl bg-red-500/10 px-4 py-2 text-xs text-red-200">
                 <AlertCircle className="h-3.5 w-3.5" />
                 {errorText}
               </div>
             )}
             
             {attachment && (
-              <div className="mb-2 flex items-center gap-2 rounded-lg border border-yellow-400/20 bg-yellow-400/10 px-3 py-2 text-xs text-yellow-200">
+              <div className="mb-2 flex items-center gap-2 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-4 py-2 text-xs text-yellow-200">
                 <span className="truncate">{attachment.name}</span>
                 <button type="button" onClick={() => setAttachment(null)} className="ml-auto rounded-full p-1 hover:bg-white/10">
                   <X className="h-3 w-3" />
@@ -636,7 +633,7 @@ setSubmitting(false);
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="flex items-end gap-2">
+            <form onSubmit={handleSubmit} className="flex items-center gap-2">
               <div className="flex h-[52px] flex-1 items-center rounded-full border border-white/10 bg-[#141414] px-1 focus-within:border-yellow-400/40">
                 <label className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/40 transition hover:bg-white/5 hover:text-white">
                   <input
