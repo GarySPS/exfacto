@@ -33,6 +33,10 @@ type AdminNavProps = {
 };
 
 function getAdminLinks(t: AdminNavText) {
+  // ⬇️ ⬇️ ⬇️ TOGGLE TO SHOW/HIDE WALLET ADDRESSES TAB ⬇️ ⬇️ ⬇️
+  const SHOW_WALLET_ADDRESSES = false;
+  // ⬆️ ⬆️ ⬆️ ======================================== ⬆️ ⬆️ ⬆️
+
   return [
     {
       label: t.users,
@@ -44,11 +48,11 @@ function getAdminLinks(t: AdminNavText) {
       href: "/admin/wallet-requests",
       icon: Wallet,
     },
-    {
+    ...(SHOW_WALLET_ADDRESSES ? [{
       label: t.walletAddresses,
       href: "/admin/wallet-addresses",
       icon: Landmark,
-    },
+    }] : []),
     {
       label: t.support,
       href: "/admin/support",

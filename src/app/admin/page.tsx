@@ -26,6 +26,10 @@ function AdminRedirect({ profile }: { profile: Profile }) {
   const router = useRouter();
 
   useEffect(() => {
+    // ⬇️ ⬇️ ⬇️ TOGGLE TO ENABLE/DISABLE WALLET ADDRESSES REDIRECT ⬇️ ⬇️ ⬇️
+    const SHOW_WALLET_ADDRESSES = false;
+    // ⬆️ ⬆️ ⬆️ ================================================== ⬆️ ⬆️ ⬆️
+
     if (canAccessAdminPath(profile.role, "/admin/users")) {
       router.replace("/admin/users");
       return;
@@ -36,7 +40,7 @@ function AdminRedirect({ profile }: { profile: Profile }) {
       return;
     }
 
-    if (canAccessAdminPath(profile.role, "/admin/wallet-addresses")) {
+    if (SHOW_WALLET_ADDRESSES && canAccessAdminPath(profile.role, "/admin/wallet-addresses")) {
       router.replace("/admin/wallet-addresses");
       return;
     }
