@@ -10,9 +10,11 @@ import AppShell from "@/components/layout/AppShell";
 import RequireAuth from "@/components/auth/RequireAuth";
 import { supabase } from "@/lib/supabaseClient";
 import type { Profile } from "@/types/profile";
+import { useRouter } from "next/navigation";
 import {
   AlertCircle,
   ArrowDownToLine,
+  ArrowLeft,
   ArrowUpFromLine,
   CheckCircle,
   Clock,
@@ -129,6 +131,7 @@ export default function SupportPage() {
 function SupportContent({ profile }: { profile: Profile }) {
   const lang = getLanguage(profile.language);
   const t = messages[lang];
+  const router = useRouter();
 
   const [activeTopic, setActiveTopic] = useState<SupportTopic>("missionHelp");
   const [message, setMessage] = useState("");
@@ -491,16 +494,21 @@ setSubmitting(false);
   return (
     <AppShell>
       <section className="px-5 pt-8">
-        <div className="mb-5 flex items-center justify-between">
-          <div>
-            <p className="text-sm text-yellow-200/80">{t.support.supportChat}</p>
-            <h1 className="text-2xl font-black">{t.support.customerSupport}</h1>
-            <p className="mt-1 text-xs text-white/45">
-              {t.support.subtitle}
-            </p>
+        <div className="mb-5 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => router.back()}
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-white/70 transition hover:bg-white/10 hover:text-yellow-300"
+            >
+              <ArrowLeft className="h-6 w-6" />
+            </button>
+            <div>
+              <p className="text-sm text-yellow-200/80">{t.support.supportChat}</p>
+              <h1 className="text-2xl font-black">{t.support.customerSupport}</h1>
+            </div>
           </div>
 
-          <div className="rounded-2xl border border-yellow-400/30 bg-yellow-400/10 p-3">
+          <div className="hidden rounded-2xl border border-yellow-400/30 bg-yellow-400/10 p-3 sm:block">
             <Headphones className="h-6 w-6 text-yellow-300" />
           </div>
         </div>
