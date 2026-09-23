@@ -818,22 +818,23 @@ if (!isGuestTicket(selectedTicket)) {
                     ))}
                 </div>
 
-                <div className="border-t border-white/10 bg-[#11100b]/95 p-4">
-                  <div className="flex gap-3">
-                    <textarea
-                      value={replyText}
-                      onChange={(event) => setReplyText(event.target.value)}
-                      placeholder={t.chat.replyPlaceholder}
-                      className="min-h-20 flex-1 resize-none rounded-2xl border border-white/10 bg-black/45 px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-yellow-400/50"
-                    />
+                <div className="border-t border-white/10 bg-[#0a0a0a] p-4">
+                  <div className="flex items-end gap-3">
+                    <div className="flex-1 rounded-3xl border border-white/10 bg-[#141414] p-1 focus-within:border-yellow-400/40">
+                      <textarea
+                        value={replyText}
+                        onChange={(event) => setReplyText(event.target.value)}
+                        placeholder={t.chat.replyPlaceholder}
+                        className="max-h-32 min-h-12 w-full resize-none bg-transparent px-4 py-3 text-[15px] text-white outline-none placeholder:text-white/30"
+                      />
+                    </div>
 
                     <button
                       onClick={handleSendReply}
-                      disabled={sending}
-                      className="flex min-w-36 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-yellow-300 to-yellow-600 px-5 py-4 font-black text-black shadow-[0_12px_32px_rgba(234,179,8,0.24)] disabled:opacity-60"
+                      disabled={sending || !replyText.trim()}
+                      className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full bg-yellow-400 text-black shadow-[0_4px_15px_rgba(234,179,8,0.25)] transition active:scale-95 disabled:opacity-50"
                     >
-                      <Send className="h-5 w-5" />
-                      {sending ? t.chat.sending : t.chat.send}
+                      <Send className="ml-0.5 h-5 w-5" />
                     </button>
                   </div>
                 </div>
@@ -847,7 +848,6 @@ if (!isGuestTicket(selectedTicket)) {
   );
 }
 
-// Find ChatBubble and replace the whole block with this:
 function ChatBubble({
   role,
   message,
@@ -866,24 +866,24 @@ function ChatBubble({
   const isAdmin = role === "admin";
 
   return (
-    <div className={`flex ${isAdmin ? "justify-end" : "justify-start"}`}>
+    <div className={`flex w-full ${isAdmin ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[72%] rounded-3xl p-4 ${
+        className={`relative max-w-[85%] rounded-[1.25rem] px-4 py-2.5 shadow-sm ${
           isAdmin
-            ? "rounded-tr-sm border border-yellow-400/25 bg-yellow-400/15"
-            : "rounded-tl-sm border border-white/10 bg-black/45"
+            ? "rounded-br-sm bg-yellow-500 text-black"
+            : "rounded-bl-sm bg-white/15 text-white"
         }`}
       >
         <p
-          className={`mb-2 text-xs font-black ${
-            isAdmin ? "text-yellow-100" : "text-white/65"
+          className={`mb-1 text-[10px] font-black uppercase tracking-wider ${
+            isAdmin ? "text-black/50" : "text-white/50"
           }`}
         >
           {isAdmin ? adminLabel : userLabel}
         </p>
 
         {message && message !== "Attached an image" && (
-          <p className="whitespace-pre-wrap break-words text-sm leading-6 text-white/80">
+          <p className="whitespace-pre-wrap break-words text-[14px] leading-[22px]">
             {message}
           </p>
         )}
@@ -892,12 +892,12 @@ function ChatBubble({
           <img 
             src={image_url} 
             alt="Attachment" 
-            className="mt-3 max-w-full rounded-xl object-contain" 
+            className="mt-2 max-w-full rounded-xl object-contain" 
           />
         )}
 
-        <p className="mt-2 text-right text-[11px] text-white/35">
-          {new Date(time).toLocaleString()}
+        <p className={`mt-1 text-right text-[10px] font-bold ${isAdmin ? "text-black/50" : "text-white/35"}`}>
+          {new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </p>
       </div>
     </div>

@@ -409,34 +409,30 @@ async function loadThread(
                   ))}
               </div>
 
-              <form
-                onSubmit={handleSendReply}
-                className="border-t border-white/10 bg-[#11100b]/95 p-4"
-              >
-                <textarea
-                  value={replyText}
-                  onChange={(event) => setReplyText(event.target.value)}
-                  placeholder="Type your message..."
-                  className="mb-3 min-h-20 w-full resize-none rounded-2xl border border-white/10 bg-black/45 px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-yellow-400/50"
-                />
+              <div className="border-t border-white/10 bg-[#0a0a0a] p-4 rounded-b-[2rem]">
+                <form onSubmit={handleSendReply} className="flex items-center gap-3">
+                  <div className="flex h-[52px] flex-1 items-center rounded-full border border-white/10 bg-[#141414] px-4 focus-within:border-yellow-400/40">
+                    <input
+                      type="text"
+                      value={replyText}
+                      onChange={(event) => setReplyText(event.target.value)}
+                      placeholder="Message..."
+                      className="h-full flex-1 bg-transparent text-[15px] text-white outline-none placeholder:text-white/30"
+                    />
+                  </div>
 
-                <button
-                  disabled={submitting}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-yellow-300 to-yellow-600 px-5 py-4 font-black text-black shadow-[0_12px_32px_rgba(234,179,8,0.24)] disabled:opacity-60"
-                >
-                  {submitting ? (
-                    <>
+                  <button
+                    disabled={submitting || !replyText.trim()}
+                    className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full bg-yellow-400 text-black shadow-[0_4px_15px_rgba(234,179,8,0.25)] transition active:scale-95 disabled:opacity-50"
+                  >
+                    {submitting ? (
                       <Loader2 className="h-5 w-5 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="h-5 w-5" />
-                      Send Message
-                    </>
-                  )}
-                </button>
-              </form>
+                    ) : (
+                      <Send className="ml-0.5 h-5 w-5" />
+                    )}
+                  </button>
+                </form>
+              </div>
             </div>
           )}
         </section>
@@ -454,31 +450,25 @@ function ChatBubble({
   message: string;
   time: string;
 }) {
-  const isAdmin = role === "admin";
+  const isUser = role === "user";
 
   return (
-    <div className={`flex ${isAdmin ? "justify-start" : "justify-end"}`}>
+    <div className={`flex w-full ${isUser ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[86%] rounded-3xl p-4 ${
-          isAdmin
-            ? "rounded-tl-sm border border-white/10 bg-black/45"
-            : "rounded-tr-sm border border-yellow-400/20 bg-yellow-400/15"
+        className={`relative max-w-[85%] rounded-[1.25rem] px-4 py-2.5 shadow-sm ${
+          isUser
+            ? "rounded-br-sm bg-yellow-500 text-black"
+            : "rounded-bl-sm bg-white/15 text-white"
         }`}
       >
-        <p
-          className={`mb-2 text-xs font-black ${
-            isAdmin ? "text-white/65" : "text-yellow-100"
-          }`}
-        >
-          {isAdmin ? "Support" : "You"}
-        </p>
+        {message && (
+          <p className="whitespace-pre-wrap break-words text-[14px] leading-[22px]">
+            {message}
+          </p>
+        )}
 
-        <p className="whitespace-pre-wrap break-words text-sm leading-6 text-white/80">
-          {message}
-        </p>
-
-        <p className="mt-2 text-right text-[11px] text-white/35">
-          {new Date(time).toLocaleString()}
+        <p className={`mt-1 text-right text-[10px] font-bold ${isUser ? "text-black/50" : "text-white/35"}`}>
+          {new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </p>
       </div>
     </div>

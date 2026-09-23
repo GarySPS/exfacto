@@ -133,16 +133,13 @@ function SupportContent({ profile }: { profile: Profile }) {
   const [activeTopic, setActiveTopic] = useState<SupportTopic>("missionHelp");
   const [message, setMessage] = useState("");
   const [attachment, setAttachment] = useState<File | null>(null);
-  const [replyTicketId, setReplyTicketId] = useState<string | null>(null);
 
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
 
   const [walletAction, setWalletAction] = useState<WalletAction | null>(null);
   const [walletAsset, setWalletAsset] = useState<WalletAsset | null>(null);
-  const [walletNetwork, setWalletNetwork] = useState<WalletNetwork | null>(
-    null
-  );
+  const [walletNetwork, setWalletNetwork] = useState<WalletNetwork | null>(null);
   const [walletAddresses, setWalletAddresses] = useState<WalletAddress[]>([]);
   const [copied, setCopied] = useState(false);
 
@@ -154,47 +151,70 @@ function SupportContent({ profile }: { profile: Profile }) {
   const [errorText, setErrorText] = useState("");
 
   const finalSubject =
-  activeTopic === "walletHelp" && walletAction && walletAsset && walletNetwork
-    ? `Wallet Help - ${walletAction.toUpperCase()} ${getWalletLabel(walletAsset, walletNetwork)}`
-    : topicSubjectMap[activeTopic];
+    activeTopic === "walletHelp" && walletAction && walletAsset && walletNetwork
+      ? `Wallet Help - ${walletAction.toUpperCase()} ${getWalletLabel(walletAsset, walletNetwork)}`
+      : topicSubjectMap[activeTopic];
 
-const finalSubjectLabel =
-  activeTopic === "walletHelp" && walletAction && walletAsset && walletNetwork
-    ? `${t.support.topics.walletHelp.title} - ${t.support.walletActions[walletAction]} ${getWalletLabel(walletAsset, walletNetwork)}`
-    : t.support.topics[activeTopic].title;
+  const finalSubjectLabel =
+    activeTopic === "walletHelp" && walletAction && walletAsset && walletNetwork
+      ? `${t.support.topics.walletHelp.title} - ${t.support.walletActions[walletAction]} ${getWalletLabel(walletAsset, walletNetwork)}`
+      : t.support.topics[activeTopic].title;
 
-const activeTopicData = helpTopics.find((item) => item.key === activeTopic);
-const ActiveTopicIcon = activeTopicData?.icon || Headphones;
+  const activeTopicData = helpTopics.find((item) => item.key === activeTopic);
+  const ActiveTopicIcon = activeTopicData?.icon || Headphones;
 
   const selectedWalletAddress = useMemo(() => {
     if (!walletAsset || !walletNetwork) return null;
-
-    return (
-      walletAddresses.find(
-        (item) =>
-          item.asset === walletAsset &&
-          item.network === walletNetwork &&
-          item.active
-      ) || null
-    );
+    return walletAddresses.find(
+      (item) => item.asset === walletAsset && item.network === walletNetwork && item.active
+    ) || null;
   }, [walletAddresses, walletAsset, walletNetwork]);
 
   const depositAddress = selectedWalletAddress?.address?.trim() || "";
 
-  const groupedMessages = useMemo(() => {
-    return tickets.map((ticket) => ({
-      ticket,
-      messages: chatMessages.filter((chat) => chat.ticket_id === ticket.id),
-    }));
-  }, [tickets, chatMessages]);
+  // NEW: Unified Telegram-style Chat Feed (Filters by currently selected tab)
+  const unifiedFeed = useMemo(() => {
+    const feed: (ChatMessage & { isTicketStart?: boolean; subject?: string })[] = [];
 
-  const replyTargetTicket = useMemo(() => {
-  return tickets.find((ticket) => ticket.id === replyTicketId) || null;
-}, [tickets, replyTicketId]);
+    // 1. Get tickets relevant to the current active tab
+    const relevantTickets = tickets.filter(t => {
+      if (activeTopic === "walletHelp") return t.subject.startsWith("Wallet Help");
+      return t.subject.startsWith(topicSubjectMap[activeTopic]);
+    });
 
-const formSubjectLabel = replyTargetTicket
-  ? replyTargetTicket.subject
-  : finalSubjectLabel;
+    relevantTickets.forEach((t) => {
+      feed.push({
+        id: t.id + "-start",
+        ticket_id: t.id,
+        sender_id: t.user_id,
+        sender_role: "user",
+        message: t.message,
+        created_at: t.created_at,
+        isTicketStart: true,
+        subject: t.subject,
+      });
+
+      if (t.admin_reply && !chatMessages.some((chat) => chat.ticket_id === t.id && chat.message === t.admin_reply)) {
+        feed.push({
+          id: t.id + "-legacy-reply",
+          ticket_id: t.id,
+          sender_id: null,
+          sender_role: "admin",
+          message: t.admin_reply,
+          created_at: t.replied_at || t.created_at,
+        });
+      }
+    });
+
+    chatMessages.forEach((c) => {
+      if (relevantTickets.some(t => t.id === c.ticket_id)) feed.push(c);
+    });
+
+    // Sort chronologically
+    return feed.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  }, [tickets, chatMessages, activeTopic]);
+
+  const formSubjectLabel = finalSubjectLabel;
 
 async function loadTicketsAndChat(showLoader = true) {
   if (showLoader) {
@@ -337,7 +357,6 @@ function handleTopicSelect(topic: SupportTopic) {
   setActiveTopic(topic);
   setSuccessText("");
   setErrorText("");
-  setReplyTicketId(null);
 
   if (topic !== "walletHelp") {
     setWalletAction(null);
@@ -354,7 +373,6 @@ function handleTopicSelect(topic: SupportTopic) {
     setWalletNetwork(null);
     setCopied(false);
     setMessage("");
-    setReplyTicketId(null);
   }
 
 function handleWalletAsset(asset: WalletAsset) {
@@ -362,7 +380,6 @@ function handleWalletAsset(asset: WalletAsset) {
   setWalletNetwork(getDefaultNetworkForAsset(asset));
   setCopied(false);
   setMessage("");
-  setReplyTicketId(null);
 }
 
   async function handleCopyAddress() {
@@ -375,17 +392,6 @@ function handleWalletAsset(asset: WalletAsset) {
       setCopied(false);
     }, 1600);
   }
-
-  function handleReplyToTicket(ticketId: string) {
-  const ticket = tickets.find((item) => item.id === ticketId);
-
-  if (!ticket || ticket.status === "closed") return;
-
-  setReplyTicketId(ticketId);
-  setMessage("");
-  setSuccessText("");
-  setErrorText("");
-}
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -402,22 +408,9 @@ function handleWalletAsset(asset: WalletAsset) {
       return;
     }
 
-let targetTicket = replyTargetTicket;
-
-if (targetTicket?.status === "closed") {
-  setErrorText("This conversation is closed.");
-  setSubmitting(false);
-  return;
-}
-
-if (!targetTicket) {
-  targetTicket =
-    tickets.find(
-      (ticket) =>
-        ticket.subject === finalSubject &&
-        ticket.status !== "closed"
+let targetTicket = tickets.find(
+      (ticket) => ticket.subject === finalSubject && ticket.status !== "closed"
     ) || null;
-}
 
     if (!targetTicket) {
       const { data: newTicket, error: ticketError } = await supabase
@@ -490,7 +483,6 @@ if (!targetTicket) {
     setMessage("");
     setAttachment(null);
 setCopied(false);
-setReplyTicketId(null);
 setSubmitting(false);
 
     await loadTicketsAndChat();
@@ -594,201 +586,86 @@ setSubmitting(false);
             />
           )}
 
-          <div className="space-y-4">
+          <div className="flex flex-col gap-3 pt-4 pb-6">
             {loading && (
               <div className="rounded-2xl bg-black/25 p-4 text-center text-sm text-white/50">
                 {t.support.loadingConversation}
               </div>
             )}
 
-            {!loading && groupedMessages.length === 0 && (
-              <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-center">
-                <MessageCircle className="mx-auto mb-2 h-6 w-6 text-yellow-300" />
-                <p className="text-sm font-bold text-white">
+            {!loading && unifiedFeed.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-6 text-center">
+                <MessageCircle className="mx-auto mb-2 h-6 w-6 text-white/20" />
+                <p className="text-sm font-bold text-white/60">
                   {t.support.noConversationYet}
-                </p>
-                <p className="mt-1 text-xs text-white/45">
-                  {t.support.noConversationNote}
                 </p>
               </div>
             )}
 
-            {!loading &&
-              groupedMessages.map(({ ticket, messages }) => (
-                <div key={ticket.id} className="space-y-3">
-                  <div className="flex items-center justify-center">
-                    <div className="rounded-full border border-white/10 bg-black/35 px-4 py-2 text-center">
-                      <p className="text-[11px] font-black text-yellow-100/80">
-                        {ticket.subject}
-                      </p>
-                      <div className="mt-1 flex items-center justify-center gap-2">
-                        <StatusBadge
-                          status={ticket.status}
-                          labels={t.support.statuses}
-                        />
-                        <span className="text-[10px] text-white/30">
-                          {new Date(ticket.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {messages.length === 0 ? (
-                    <>
-                      <ChatBubble
-                        role="user"
-                        message={ticket.message}
-                        time={ticket.created_at}
-                        youLabel={t.support.you}
-                        supportReplyLabel={t.support.supportReply}
-                      />
-
-                      {ticket.admin_reply ? (
-                        <ChatBubble
-                          role="admin"
-                          message={ticket.admin_reply}
-                          time={ticket.replied_at || ticket.created_at}
-                          youLabel={t.support.you}
-                          supportReplyLabel={t.support.supportReply}
-                        />
-                      ) : (
-                        <WaitingBubble label={t.support.waitingReview} />
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      {messages.map((chat) => (
-                        <ChatBubble
-                        key={chat.id}
-                        role={chat.sender_role}
-                        message={chat.message}
-                        image_url={chat.image_url}
-                        time={chat.created_at}
-                        youLabel={t.support.you}
-                        supportReplyLabel={t.support.supportReply}
-                      />
-                      ))}
-
-{ticket.status !== "closed" &&
-  !messages.some(
-    (chat) => chat.sender_role === "admin"
-  ) && <WaitingBubble label={t.support.waitingReview} />}
-</>
-)}
-
-{ticket.status !== "closed" && (
-  <div className="flex justify-center">
-    <button
-      type="button"
-      onClick={() => handleReplyToTicket(ticket.id)}
-      className={`rounded-full border px-4 py-2 text-xs font-black transition active:scale-[0.98] ${
-        replyTicketId === ticket.id
-          ? "border-yellow-400 bg-yellow-400 text-black"
-          : "border-yellow-400/25 bg-yellow-400/10 text-yellow-200"
-      }`}
-    >
-      {replyTicketId === ticket.id
-        ? "Reply target selected"
-        : "Reply to this notice"}
-    </button>
-  </div>
-)}
-</div>
-              ))}
+            {!loading && unifiedFeed.map((chat) => (
+              <ChatBubble
+                key={chat.id}
+                role={chat.sender_role}
+                message={chat.message}
+                image_url={chat.image_url}
+                time={chat.created_at}
+              />
+            ))}
           </div>
         </LuxuryCard>
 
-        <form
-          onSubmit={handleSubmit}
-          className="sticky bottom-24 z-20 mb-6 rounded-[2rem] border border-yellow-400/25 bg-[#11100b]/95 p-4 shadow-[0_0_45px_rgba(234,179,8,0.18),0_18px_45px_rgba(0,0,0,0.45)] backdrop-blur-2xl"
-        >
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs text-white/45">{t.support.messageToSupport}</p>
-<p className="text-sm font-black text-yellow-200">
-  {formSubjectLabel}
-</p>
+        {/* Space so user can scroll past sticky footer */}
+        <div className="h-28" />
 
-{replyTargetTicket && (
-  <button
-    type="button"
-    onClick={() => setReplyTicketId(null)}
-    className="mt-1 text-xs font-bold text-white/45 underline decoration-white/20"
-  >
-    Cancel reply target
-  </button>
-)}
-            </div>
-
-            {successText && (
-              <div className="flex items-center gap-1 text-xs font-bold text-emerald-300">
-                <CheckCircle className="h-4 w-4" />
-                {t.support.sent}
+        {/* Compact WhatsApp-Style Input Box */}
+        <div className="fixed bottom-[80px] left-0 right-0 z-30 border-t border-white/5 bg-[#050505]/95 px-5 py-3 backdrop-blur-xl md:bottom-[90px]">
+          <div className="mx-auto max-w-md">
+            {errorText && (
+              <div className="mb-2 flex items-center gap-2 rounded-xl bg-red-500/10 px-3 py-2 text-xs text-red-200">
+                <AlertCircle className="h-3.5 w-3.5" />
+                {errorText}
               </div>
             )}
-          </div>
-
-          {errorText && (
-            <div className="mb-3 flex items-center gap-2 rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-              <AlertCircle className="h-4 w-4" />
-              {errorText}
-            </div>
-          )}
-
-          <div className="mb-3 overflow-hidden rounded-2xl border border-white/10 bg-black/45 focus-within:border-yellow-400/50">
-            <textarea
-              value={message}
-              onChange={(event) => setMessage(event.target.value)}
-              placeholder={
-                replyTargetTicket
-                  ? "Reply to this official notice..."
-                  : activeTopic === "walletHelp"
-                    ? t.support.walletPlaceholder
-                    : t.support.defaultPlaceholder
-              }
-              className="min-h-20 w-full bg-transparent px-4 py-3 text-sm text-white outline-none placeholder:text-white/35"
-            />
             
             {attachment && (
-              <div className="mx-4 mb-2 flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-xs text-yellow-300">
+              <div className="mb-2 flex items-center gap-2 rounded-lg border border-yellow-400/20 bg-yellow-400/10 px-3 py-2 text-xs text-yellow-200">
                 <span className="truncate">{attachment.name}</span>
-                <button type="button" onClick={() => setAttachment(null)} className="ml-2 rounded-full p-1 hover:bg-white/10 text-white">
+                <button type="button" onClick={() => setAttachment(null)} className="ml-auto rounded-full p-1 hover:bg-white/10">
                   <X className="h-3 w-3" />
                 </button>
               </div>
             )}
 
-            <div className="flex items-center gap-2 bg-black/20 px-3 py-2">
-              <input
-                type="file"
-                id="chat-attachment"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => setAttachment(e.target.files?.[0] || null)}
-              />
-              <label
-                htmlFor="chat-attachment"
-                className="flex cursor-pointer items-center justify-center rounded-lg p-2 text-white/50 transition hover:bg-white/10 hover:text-white"
-              >
-                <ImageIcon className="h-5 w-5" />
-              </label>
-            </div>
-          </div>
+            <form onSubmit={handleSubmit} className="flex items-end gap-2">
+              <div className="flex h-[52px] flex-1 items-center rounded-full border border-white/10 bg-[#141414] px-1 focus-within:border-yellow-400/40">
+                <label className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/40 transition hover:bg-white/5 hover:text-white">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => setAttachment(e.target.files?.[0] || null)}
+                  />
+                  <ImageIcon className="h-5 w-5" />
+                </label>
 
-          <button
-            disabled={submitting}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-yellow-200 via-yellow-400 to-yellow-600 px-5 py-4 font-black text-black shadow-[0_12px_32px_rgba(234,179,8,0.28)] active:scale-[0.98] disabled:opacity-60"
-          >
-            {submitting ? (
-  t.support.sending
-) : (
-  <>
-    <Send className="h-5 w-5" />
-    {t.support.sendMessage}
-  </>
-)}
-          </button>
-        </form>
+                <input
+                  type="text"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Message..."
+                  className="h-full flex-1 bg-transparent px-2 text-[15px] text-white outline-none placeholder:text-white/30"
+                />
+              </div>
+
+              <button
+                disabled={submitting || (!message.trim() && !attachment)}
+                className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full bg-yellow-400 text-black shadow-[0_4px_15px_rgba(234,179,8,0.25)] transition active:scale-95 disabled:opacity-50"
+              >
+                <Send className="ml-0.5 h-5 w-5" />
+              </button>
+            </form>
+          </div>
+        </div>
       </section>
     </AppShell>
   );
@@ -799,55 +676,39 @@ function ChatBubble({
   message,
   image_url,
   time,
-  youLabel,
-  supportReplyLabel,
 }: {
   role: "user" | "admin";
   message: string;
   image_url?: string | null;
   time: string;
-  youLabel: string;
-  supportReplyLabel: string;
 }) {
   const isUser = role === "user";
 
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+    <div className={`flex w-full ${isUser ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[88%] rounded-3xl p-4 ${
+        className={`relative max-w-[85%] rounded-[1.25rem] px-4 py-2.5 shadow-sm ${
           isUser
-            ? "rounded-tr-sm border border-yellow-400/20 bg-yellow-400/15"
-            : "rounded-tl-sm border border-white/10 bg-black/35"
+            ? "rounded-br-sm bg-yellow-500 text-black"
+            : "rounded-bl-sm bg-white/15 text-white"
         }`}
       >
-        <div className="mb-2 flex items-center gap-2">
-          {isUser ? (
-            <MessageCircle className="h-4 w-4 text-yellow-300" />
-          ) : (
-            <Headphones className="h-4 w-4 text-yellow-300" />
-          )}
-
-          <p className="text-xs font-black text-yellow-100">
-            {isUser ? youLabel : supportReplyLabel}
-          </p>
-        </div>
-
         {message && message !== "Attached an image" && (
-          <p className="whitespace-pre-wrap break-words text-sm leading-6 text-white/80">
+          <p className="whitespace-pre-wrap break-words text-[14px] leading-[22px]">
             {message}
           </p>
         )}
 
         {image_url && (
-          <img 
-            src={image_url} 
-            alt="Attachment" 
-            className="mt-3 max-w-full rounded-xl object-contain" 
+          <img
+            src={image_url}
+            alt="Attachment"
+            className="mt-2 max-w-full rounded-xl object-contain"
           />
         )}
 
-        <p className="mt-2 text-right text-[11px] text-white/35">
-          {new Date(time).toLocaleString()}
+        <p className={`mt-1 text-right text-[10px] font-bold ${isUser ? "text-black/50" : "text-white/35"}`}>
+          {new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </p>
       </div>
     </div>
