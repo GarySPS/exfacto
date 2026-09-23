@@ -60,7 +60,7 @@ function isValidPhoneNumber(phone: string) {
 
 function phoneToHiddenEmail(phone: string) {
   const digits = phone.replace(/\D/g, "");
-  return `${digits}@exfacto.member`;
+  return `${digits}@exfactomember`;
 }
 
 export default function LoginPage() {
@@ -174,11 +174,20 @@ useEffect(() => {
     }
 
     try {
-      // If Admin entrance and it contains "@", treat as Admin email. 
-      // Otherwise, treat as a Support/Leader phone number and convert it.
-      const loginEmail = adminEntrance
-        ? (cleanLoginId.includes("@") ? cleanLoginId.toLowerCase() : phoneToHiddenEmail(cleanLoginId))
-        : phoneToHiddenEmail(cleanPhone);
+      let loginEmail = cleanLoginId;
+
+      // If it doesn't contain an '@', treat it as a phone number and convert it
+      if (!cleanLoginId.includes("@")) {
+        const cleanPhone = normalizePhoneNumber(cleanLoginId);
+        if (!isValidPhoneNumber(cleanPhone)) {
+          setErrorText("Please enter a valid phone number.");
+          setLoading(false);
+          return;
+        }
+        loginEmail = phoneToHiddenEmail(cleanPhone);
+      } else {
+        loginEmail = cleanLoginId.toLowerCase();
+      }
 
       const { error } = await supabase.auth.signInWithPassword({
         email: loginEmail,
@@ -296,7 +305,7 @@ useEffect(() => {
               <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-yellow-300/70 to-transparent" />
 
               <div className="space-y-4">
-              <label className="block">
+                <label className="block">
                   <span className="mb-2 block text-xs font-bold text-white/45">
                     {isAdminPortal ? "Email or Phone" : "Phone Number"}
                   </span>
@@ -315,8 +324,8 @@ useEffect(() => {
                           isAdminPortal ? e.target.value : formatPhoneInput(e.target.value)
                         )
                       }
-                      placeholder={isAdminPortal ? "admin@... or +1xxx" : "+1xxx"}
-                      type={isAdminPortal ? "text" : "tel"}
+                      placeholder={isAdminPortal ? "team@... or +1xxx" : "+1xxx"}
+                      type="text"
                       inputMode={isAdminPortal ? "text" : "numeric"}
                       autoComplete={isAdminPortal ? "username" : "tel"}
                       className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/25"
