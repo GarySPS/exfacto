@@ -4,13 +4,14 @@
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
-type TelegramGroup = 'register' | 'deposit' | 'withdraw' | 'transaction';
+type TelegramGroup = 'register' | 'deposit' | 'withdraw' | 'transaction' | 'alert';
 
 const GROUP_IDS: Record<TelegramGroup, string | undefined> = {
   register: process.env.TELEGRAM_REGISTER_GROUP_ID,
   deposit: process.env.TELEGRAM_DEPOSIT_GROUP_ID,
   withdraw: process.env.TELEGRAM_WITHDRAW_GROUP_ID,
   transaction: process.env.TELEGRAM_TRANSACTION_GROUP_ID,
+  alert: process.env.TELEGRAM_ALERT_GROUP_ID,
 };
 
 export async function sendTelegramNoti(group: TelegramGroup, message: string) {

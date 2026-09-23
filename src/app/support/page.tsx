@@ -542,7 +542,17 @@ setSubmitting(false);
           })}
         </div>
 
-                <LuxuryCard className="mb-4 p-4">
+        {/* Anti-Phishing Shield Banner */}
+        <div className="mb-4 rounded-2xl border border-red-500/30 bg-red-500/10 p-3 shadow-[0_0_15px_rgba(239,68,68,0.15)]">
+          <div className="flex items-start gap-2">
+            <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-red-400" />
+            <p className="text-xs leading-5 text-red-200">
+              <strong className="font-black text-red-400">SECURITY NOTICE:</strong> Official staff will <strong>NEVER</strong> ask you to send crypto via chat, Telegram, or to a personal wallet. All deposits must occur on the official Deposit Page.
+            </p>
+          </div>
+        </div>
+
+        <LuxuryCard className="mb-4 p-4">
           <div className="mb-4 flex items-center justify-between gap-3 rounded-[1.4rem] border border-yellow-400/20 bg-yellow-400/10 p-3">
             <div className="flex min-w-0 items-center gap-3">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-yellow-300 text-black shadow-[0_0_22px_rgba(234,179,8,0.28)]">

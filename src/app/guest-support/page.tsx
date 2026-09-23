@@ -1,3 +1,5 @@
+//src/app/guest-support/page.tsx
+
 "use client";
 
 import Link from "next/link";
@@ -78,17 +80,30 @@ export default function GuestSupportPage() {
   }, []);
 
   useEffect(() => {
-  if (!guestSessionId || !ticketId) return;
+    if (!guestSessionId || !ticketId) return;
 
-  const intervalId = window.setInterval(() => {
-    loadThread(guestSessionId, ticketId, true);
-  }, 8000);
+    // Listen instantly for new messages on this specific ticket
+    const channel = supabase
+      .channel(`guest-support-${ticketId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "support_chat_messages",
+          filter: `ticket_id=eq.${ticketId}`,
+        },
+        () => {
+          loadThread(guestSessionId, ticketId, true);
+        }
+      )
+      .subscribe();
 
-  return () => {
-    window.clearInterval(intervalId);
-  };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [guestSessionId, ticketId]);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guestSessionId, ticketId]);
 
 async function loadThread(
   activeSessionId = guestSessionId,
@@ -351,8 +366,16 @@ async function loadThread(
                 </div>
 
                 <div className="mt-3 flex items-center gap-2 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-3 py-2 text-xs text-yellow-100/75">
-                  <ShieldCheck className="h-4 w-4" />
+                  <ShieldCheck className="h-4 w-4 shrink-0" />
                   Please keep this page on the same browser.
+                </div>
+
+                {/* Anti-Phishing Shield Banner for Guests */}
+                <div className="mt-3 flex items-start gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-3 py-2 shadow-[0_0_15px_rgba(239,68,68,0.15)]">
+                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
+                  <p className="text-xs leading-5 text-red-200">
+                    <strong className="font-black text-red-400">SECURITY NOTICE:</strong> Official staff will <strong>NEVER</strong> ask you to send crypto via chat, Telegram, or to a personal wallet.
+                  </p>
                 </div>
               </div>
 

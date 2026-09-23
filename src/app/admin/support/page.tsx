@@ -11,6 +11,7 @@ import AdminNav from "../AdminNav";
 import { supabase } from "@/lib/supabaseClient";
 import { canAccessAdminPath } from "@/lib/adminPermissions";
 import type { Profile } from "@/types/profile";
+import { validateAdminSupportMessage } from "./actions";
 import {
   AlertCircle,
   CheckCircle,
@@ -391,23 +392,39 @@ async function loadTickets() {
       return;
     }
 
-if (!isGuestTicket(selectedTicket)) {
-  const { data: canAccess, error: accessError } = await supabase.rpc(
-    "staff_can_access_user",
-    {
-      p_target_user_id: selectedTicket.user_id,
-    }
-  );
+    if (!isGuestTicket(selectedTicket)) {
+      const { data: canAccess, error: accessError } = await supabase.rpc(
+        "staff_can_access_user",
+        {
+          p_target_user_id: selectedTicket.user_id,
+        }
+      );
 
-  if (accessError || !canAccess) {
-    setErrorText("You cannot reply to this user's support ticket.");
-    return;
-  }
-}
+      if (accessError || !canAccess) {
+        setErrorText("You cannot reply to this user's support ticket.");
+        return;
+      }
+    }
 
     setSending(true);
     setSuccessText("");
     setErrorText("");
+
+    // --- ZERO-TRUST ANTI-PHISHING SHIELD ---
+    const securityCheck = await validateAdminSupportMessage(
+      finalReply, 
+      profile.id, 
+      selectedTicket.id,
+      selectedTicket.user_id,
+      selectedTicket.guest_name
+    );
+    
+    if (!securityCheck.success) {
+      setErrorText(securityCheck.error || "Security violation detected.");
+      setSending(false);
+      return;
+    }
+    // ---------------------------------------
 
     const { error: chatError } = await supabase
       .from("support_chat_messages")
