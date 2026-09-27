@@ -34,7 +34,7 @@ type AdminNavProps = {
 
 function getAdminLinks(t: AdminNavText) {
   // ⬇️ ⬇️ ⬇️ TOGGLE TO SHOW/HIDE WALLET ADDRESSES TAB ⬇️ ⬇️ ⬇️
-  const SHOW_WALLET_ADDRESSES = true;
+  const SHOW_WALLET_ADDRESSES = false;
   // ⬆️ ⬆️ ⬆️ ======================================== ⬆️ ⬆️ ⬆️
 
   return [
