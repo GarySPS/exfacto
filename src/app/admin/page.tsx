@@ -27,7 +27,7 @@ function AdminRedirect({ profile }: { profile: Profile }) {
 
   useEffect(() => {
     // ⬇️ ⬇️ ⬇️ TOGGLE TO ENABLE/DISABLE WALLET ADDRESSES REDIRECT ⬇️ ⬇️ ⬇️
-    const SHOW_WALLET_ADDRESSES = false;
+    const SHOW_WALLET_ADDRESSES = true;
     // ⬆️ ⬆️ ⬆️ ================================================== ⬆️ ⬆️ ⬆️
 
     if (canAccessAdminPath(profile.role, "/admin/users")) {
